@@ -1,5 +1,5 @@
 -- ======================================= --
--- =======REMPLISSAGE DE LA BASE========= --
+-- ======= REMPLISSAGE DE LA BASE ======== --
 -- ======================================= -- 
 
 INSERT INTO Theme (theme) VALUES ('informatique'); 
