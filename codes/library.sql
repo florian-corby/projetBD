@@ -146,16 +146,16 @@ CREATE TABLE Borrow (
 -- ============================================================= --
 -- ================== Script de création BD ==================== --
 -- ============================================================= --
-DROP TRIGGER tg_document_category;
-CREATE TRIGGER tg_document_category BEFORE INSERT ON Document
-BEGIN
-(SELECT Count(*) Into refCount FROM Document doc, Book b, CD c, DVD dvd, Video v
-    WHERE doc.reference = b.reference 
-    OR doc.reference = c.reference 
-    OR doc.reference = dvd.reference 
-    OR doc.reference = v.reference
-    GROUP BY reference);
-if(refCount<> 1)
-then ROLLBACK();
-end if;
-END;
+--DROP TRIGGER tg_document_category;
+--CREATE TRIGGER tg_document_category BEFORE INSERT ON Document
+--BEGIN
+--(SELECT Count(*) Into refCount FROM Document doc, Book b, CD c, DVD dvd, Video v
+--    WHERE doc.reference = b.reference 
+--    OR doc.reference = c.reference 
+--    OR doc.reference = dvd.reference 
+--    OR doc.reference = v.reference
+--    GROUP BY reference);
+--if(refCount<> 1)
+--then ROLLBACK();
+--end if;
+--END;
