@@ -142,6 +142,7 @@ CREATE TABLE Borrow (
     CONSTRAINT FK_Borrow_Copy FOREIGN KEY (copy) REFERENCES Copy(id)
 );
 
+COMMIT;
 
 -- ============================================================= --
 -- ================== Script de création BD ==================== --

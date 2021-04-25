@@ -147,3 +147,5 @@ INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (11, 3, 
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (11, 8, to_date('2019-07-07', 'YYYY-MM-DD'), to_date('2019-07-10', 'YYYY-MM-DD'));
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (11, 11, to_date('2019-07-07', 'YYYY-MM-DD'), to_date('2019-07-09', 'YYYY-MM-DD'));
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (11, 18, to_date('2019-07-10', 'YYYY-MM-DD'), to_date('2019-07-11', 'YYYY-MM-DD'));
+
+COMMIT;
