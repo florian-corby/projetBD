@@ -29,18 +29,6 @@ INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'Vid
 
 
 -- ********* DOCUMENT ZONE ********* --
-INSERT INTO Theme (theme) VALUES ('informatique'); 
-INSERT INTO Theme (theme) VALUES ('mathematiques');
-INSERT INTO Theme (theme) VALUES('physique');
-INSERT INTO Theme (theme) VALUES('anglais');
-INSERT INTO Theme (theme) VALUES ('sport');
-
-INSERT INTO Editor (name, address, phone) VALUES ('Dunod', '11 rue Paul Bert 92247 Malakof CEDEX' ,0202020202);
-INSERT INTO Editor (name, address, phone) VALUES('Eyrolles', '12 rue Paul Bert 92247 Malakof CEDEX', 0301050608);
-INSERT INTO Editor (name, address, phone) VALUES ('DupondEtDupont', '13 rue Paul Bert 92247 Malakof CEDEX', 0908536274);
-INSERT INTO Editor (name, address, phone) VALUES ('Laffont', '14 rue Paul Bert 92247 Malakof CEDEX', 0538759531);
-INSERT INTO Editor (name, address, phone) VALUES ('Taylor', '15 rue Paul Bert 92247 Malakof CEDEX', 0123456789);
-
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (1, 'Taylor', 'Allen', '1 impasse Swift 86000 Poitiers', to_date('1975-02-25', 'YYYY-MM-DD'));
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES(2, 'Legendre', 'Florian', '2 avenue des Gorons 69000 Lyon', to_date('1265-07-15', 'YYYY-MM-DD'));
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (3, 'Berthelot', 'Yann', '3 strada italiana 00144 Rome', to_date('2000-12-12', 'YYYY-MM-DD'));
@@ -52,26 +40,112 @@ INSERT INTO Author (id, name, fst_name, address, birth) VALUES (8, 'Cepacare', '
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (9, 'Guetta', 'David', 'rue de la pie qui boit 35400 Saint-Malo', to_date('1998-03-05', 'YYYY-MM-DD'));
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (10, 'Fer', 'Lucie', '6 rue des enfers 72650 Saint-Saturnin', to_date('1969-06-16', 'YYYY-MM-DD'));
 
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (1, 'SQL pour les nuls', 'SQL', 1, 'Taylor', 'informatique', 'Book', 50);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (2, 'SQL pour les non nuls', 'SQL', 2, 'Eyrolles', 'informatique', 'Book', 1);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (3, 'SQL pour les gens ni nuls ni non nuls', 'SQL', 3, 'Dunod', 'informatique', 'Book', 5);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (4, 'Reussir a coder les yeux fermes', 'Java', 4, 'Laffont', 'informatique', 'Book', 2);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (5, 'Programmer en Java', 'Java', 5, 'Dunod', 'informatique', 'Book', 2);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (6, 'Seance de remise en forme', 'fitness', 2, 'DupondEtDupont', 'sport', 'CD', 4);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (7, 'Conception des echecs version sorcier', 'Java', 3, 'Dunod', 'informatique', 'CD', 4);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (8, 'Les lois universelles de la physique', 'formules', 4, 'Eyrolles', 'physique', 'CD', 6);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (9, 'Un et un font deux', 'addition', 2, 'Dunod', 'mathematiques', 'CD', 8);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (10, 'La geometrie des espaces', 'geometrie', 6, 'Laffont', 'mathematiques', 'CD', 5);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (11, 'La compilation des programmes', 'compiler', 7, 'Dunod', 'informatique', 'DVD', 1);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (12, 'Reviser la programmation orientee objet', 'Java', 8, 'Eyrolles', 'informatique', 'DVD', 9);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (13, 'Elon Musk in space', 'autobiographie', 9, 'DupondEtDupont', 'anglais', 'DVD', 5);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (14, 'Brian is in the kitchen', 'apprentissage', 10, 'DupondEtDupont', 'anglais', 'DVD', 1);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (15, 'Apprendre Symfony en 150 minutes', 'symfony', 2, 'Dunod', 'informatique', 'DVD', 7);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (16, 'Premiers pas en informatique', 'OCaml', 3, 'Laffont', 'informatique', 'Video', 10);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (17, 'Tout savoir sur la physique quantique', 'quantique', 4, 'Eyrolles', 'physique', 'Video', 2);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (18, 'Les etoiles de Thomas Pesquet', 'espace', 5, 'Laffont', 'physique', 'Video', 4);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (19, 'Les logiciels pour Mac', 'Mac', 6, 'Dunod', 'informatique', 'Video', 3);
-INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (20, 'Linux contre Windows', 'Systeme', 7, 'Eyrolles', 'informatique', 'Video', 7);
+INSERT INTO Editor (name, address, phone) VALUES ('Dunod', '11 rue Paul Bert 92247 Malakof CEDEX' ,0202020202);
+INSERT INTO Editor (name, address, phone) VALUES('Eyrolles', '12 rue Paul Bert 92247 Malakof CEDEX', 0301050608);
+INSERT INTO Editor (name, address, phone) VALUES ('DupondEtDupont', '13 rue Paul Bert 92247 Malakof CEDEX', 0908536274);
+INSERT INTO Editor (name, address, phone) VALUES ('Laffont', '14 rue Paul Bert 92247 Malakof CEDEX', 0538759531);
+INSERT INTO Editor (name, address, phone) VALUES ('Taylor', '15 rue Paul Bert 92247 Malakof CEDEX', 0123456789);
+
+INSERT INTO Keyword (keyword) VALUES ('educational');
+INSERT INTO Keyword (keyword) VALUES ('amazing');
+INSERT INTO Keyword (keyword) VALUES ('mind-blowing');
+INSERT INTO Keyword (keyword) VALUES ('boring');
+INSERT INTO Keyword (keyword) VALUES ('incisive');
+INSERT INTO Keyword (keyword) VALUES ('relaxing');
+INSERT INTO Keyword (keyword) VALUES ('wholesome');
+INSERT INTO Keyword (keyword) VALUES ('nsfw');
+INSERT INTO Keyword (keyword) VALUES ('mind-twister');
+INSERT INTO Keyword (keyword) VALUES ('controversial');
+INSERT INTO Keyword (keyword) VALUES ('entertaining');
+INSERT INTO Keyword (keyword) VALUES ('artwork');
+INSERT INTO Keyword (keyword) VALUES ('gruesome');
+INSERT INTO Keyword (keyword) VALUES ('philosophical');
+INSERT INTO Keyword (keyword) VALUES ('poetic');
+INSERT INTO Keyword (keyword) VALUES ('heart-warming');
+INSERT INTO Keyword (keyword) VALUES ('SQL');
+INSERT INTO Keyword (keyword) VALUES ('Java');
+INSERT INTO Keyword (keyword) VALUES ('formules');
+INSERT INTO Keyword (keyword) VALUES ('addition');
+INSERT INTO Keyword (keyword) VALUES ('geometrie');
+INSERT INTO Keyword (keyword) VALUES ('compiler');
+INSERT INTO Keyword (keyword) VALUES ('autobiographie');
+INSERT INTO Keyword (keyword) VALUES ('apprentissage');
+INSERT INTO Keyword (keyword) VALUES ('symfony');
+INSERT INTO Keyword (keyword) VALUES ('Ocaml');
+INSERT INTO Keyword (keyword) VALUES ('quantique');
+INSERT INTO Keyword (keyword) VALUES ('espace');
+INSERT INTO Keyword (keyword) VALUES ('Mac');
+INSERT INTO Keyword (keyword) VALUES ('Systeme');
+
+INSERT INTO Theme (theme) VALUES ('informatique'); 
+INSERT INTO Theme (theme) VALUES ('mathematiques');
+INSERT INTO Theme (theme) VALUES('physique');
+INSERT INTO Theme (theme) VALUES('anglais');
+INSERT INTO Theme (theme) VALUES ('sport');
+
+
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (1, 'SQL pour les nuls', 50, 'Taylor', 'informatique', 'Book', 200,  null, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (2, 'SQL pour les non nuls', 1, 'Eyrolles', 'informatique', 'Book', 2000, null, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (3, 'SQL pour les gens ni nuls ni non nuls', 5, 'Dunod', 'informatique', 'Book', 8001, null, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (4, 'Reussir a coder les yeux fermes', 2, 'Laffont', 'informatique', 'Book', 42, null, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (5, 'Programmer en Java', 2, 'Dunod', 'informatique', 'Book', 503, null, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (6, 'Seance de remise en forme', 2, 'DupondEtDupont', 'sport', 'CD', null, 30, null, 8);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (7, 'Conception des echecs version sorcier', 3, 'Dunod', 'informatique', 'CD', null, 90, null, 127);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (8, 'Les lois universelles de la physique', 4, 'Eyrolles', 'physique', 'CD', null, 180, null, 321);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (9, 'Un et un font deux', 8, 'Dunod', 'mathematiques', 'CD', null, 3600, null, 4500);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (10, 'La geometrie des espaces', 5, 'Laffont', 'mathematiques', 'CD', null, 127, null, 129);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (11, 'La compilation des programmes', 1, 'Dunod', 'informatique', 'DVD', null, 252, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (12, 'Reviser la programmation orientee objet', 9, 'Eyrolles', 'informatique', 'DVD', null, 31252, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (13, 'Elon Musk in space', 5, 'DupondEtDupont', 'anglais', 'DVD', null, 75, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (14, 'Brian is in the kitchen', 1, 'DupondEtDupont', 'anglais', 'DVD', null, 83, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (15, 'Apprendre Symfony en 150 minutes', 7, 'Dunod', 'informatique', 'DVD', null, 151, null, null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (16, 'Premiers pas en informatique', 10, 'Laffont', 'informatique', 'Video', null, 15, null, 'MP4');
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (17, 'Tout savoir sur la physique quantique', 2, 'Eyrolles', 'physique', 'Video', null, 2, null, 'AVI');
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (18, 'Les etoiles de Thomas Pesquet', 4, 'Laffont', 'physique', 'Video', null, 65, null, 'FLV');
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (19, 'Les logiciels pour Mac', 3, 'Dunod', 'informatique', 'Video', null, 3, null, 'WMV');
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (20, 'Linux contre Windows', 7, 'Eyrolles', 'informatique', 'Video', null, 76, null, 'MOV');
+
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--INSERT INTO DocumentAuthors (reference, author_id) VALUES ();
+--
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
+--INSERT INTO DocumentKeywords (reference, keyword) VALUES ();
 
 INSERT INTO Copy (id, aisleID, reference) VALUES (1, 1, 1);
 INSERT INTO Copy (id, aisleID, reference) VALUES (2, 1, 2);
