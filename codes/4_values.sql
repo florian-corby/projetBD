@@ -2,6 +2,33 @@
 -- ======= REMPLISSAGE DE LA BASE ======== --
 -- ======================================= -- 
 
+
+-- ********* RIGHTS ZONE ********* --
+INSERT INTO CatBorrower (cat_borrower, borrowing_max) VALUES ('Staff', 10);
+INSERT INTO CatBorrower (cat_borrower, borrowing_max) VALUES ('Professional', 5);
+INSERT INTO CatBorrower (cat_borrower, borrowing_max) VALUES ('Public', 3);
+
+INSERT INTO CatDoc (cat_document) VALUES ('Book');
+INSERT INTO CatDoc (cat_document) VALUES ('CD');
+INSERT INTO CatDoc (cat_document) VALUES ('DVD');
+INSERT INTO CatDoc (cat_document) VALUES ('Video');
+
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Staff', 'Book', 9);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Staff', 'CD', 5);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Staff', 'DVD', 4);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Staff', 'Video', 3);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Professional', 'Book', 11);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Professional', 'CD', 4);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Professional', 'DVD', 3);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Professional', 'Video', 2);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'Book', 3);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'CD', 3);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'DVD', 2);
+INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'Video', 1);
+
+
+
+-- ********* DOCUMENT ZONE ********* --
 INSERT INTO Theme (theme) VALUES ('informatique'); 
 INSERT INTO Theme (theme) VALUES ('mathematiques');
 INSERT INTO Theme (theme) VALUES('physique');
@@ -25,28 +52,6 @@ INSERT INTO Author (id, name, fst_name, address, birth) VALUES (8, 'Cepacare', '
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (9, 'Guetta', 'David', 'rue de la pie qui boit 35400 Saint-Malo', to_date('1998-03-05', 'YYYY-MM-DD'));
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (10, 'Fer', 'Lucie', '6 rue des enfers 72650 Saint-Saturnin', to_date('1969-06-16', 'YYYY-MM-DD'));
 
-INSERT INTO CatBorrower (cat_borrower, borrowing_max) VALUES ('Staff', 10);
-INSERT INTO CatBorrower (cat_borrower, borrowing_max) VALUES ('Professional', 5);
-INSERT INTO CatBorrower (cat_borrower, borrowing_max) VALUES ('Public', 3);
-
-INSERT INTO CatDoc (cat_document) VALUES ('Book');
-INSERT INTO CatDoc (cat_document) VALUES ('CD');
-INSERT INTO CatDoc (cat_document) VALUES ('DVD');
-INSERT INTO CatDoc (cat_document) VALUES ('Video');
-
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Staff', 'Book', 9);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Staff', 'CD', 5);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Staff', 'DVD', 4);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Staff', 'Video', 3);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Professional', 'Book', 11);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Professional', 'CD', 4);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Professional', 'DVD', 3);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Professional', 'Video', 2);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'Book', 3);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'CD', 3);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'DVD', 2);
-INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'Video', 1);
-
 INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (1, 'SQL pour les nuls', 'SQL', 1, 'Taylor', 'informatique', 'Book', 50);
 INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (2, 'SQL pour les non nuls', 'SQL', 2, 'Eyrolles', 'informatique', 'Book', 1);
 INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (3, 'SQL pour les gens ni nuls ni non nuls', 'SQL', 3, 'Dunod', 'informatique', 'Book', 5);
@@ -67,30 +72,6 @@ INSERT INTO Document (reference, title, key_word, author, editor, theme, categor
 INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (18, 'Les etoiles de Thomas Pesquet', 'espace', 5, 'Laffont', 'physique', 'Video', 4);
 INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (19, 'Les logiciels pour Mac', 'Mac', 6, 'Dunod', 'informatique', 'Video', 3);
 INSERT INTO Document (reference, title, key_word, author, editor, theme, category, qte) VALUES (20, 'Linux contre Windows', 'Systeme', 7, 'Eyrolles', 'informatique', 'Video', 7);
-
-INSERT INTO Book (reference, page) VALUES (1, 1750);
-INSERT INTO Book (reference, page) VALUES (2, 329);
-INSERT INTO Book (reference, page) VALUES (3, 11);
-INSERT INTO Book (reference, page) VALUES (4, 255);
-INSERT INTO Book (reference, page) VALUES (5, 666);
-
-INSERT INTO Video(reference, time, format) VALUES (16, 160, 'MP4');
-INSERT INTO Video(reference, time, format) VALUES (17, 170, 'MP4');
-INSERT INTO Video(reference, time, format) VALUES (18, 180, 'AVI');
-INSERT INTO Video(reference, time, format) VALUES (19, 190, 'AVI');
-INSERT INTO Video(reference, time, format) VALUES (20, 200, 'FLV');
-
-INSERT INTO DVD(reference, time) VALUES (11, 110);
-INSERT INTO DVD(reference, time) VALUES (12, 120);
-INSERT INTO DVD(reference, time) VALUES (13, 130);
-INSERT INTO DVD(reference, time) VALUES (14, 140);
-INSERT INTO DVD(reference, time) VALUES (15, 150);
-
-INSERT INTO CD(reference, time, subtitle) VALUES (6, 60, 0);
-INSERT INTO CD(reference, time, subtitle) VALUES (7, 70, 5);
-INSERT INTO CD(reference, time, subtitle) VALUES (8, 80, 15);
-INSERT INTO CD(reference, time, subtitle) VALUES (9, 90, 2);
-INSERT INTO CD(reference, time, subtitle) VALUES (10, 1000, 1);
 
 INSERT INTO Copy (id, aisleID, reference) VALUES (1, 1, 1);
 INSERT INTO Copy (id, aisleID, reference) VALUES (2, 1, 2);
@@ -113,6 +94,8 @@ INSERT INTO Copy (id, aisleID, reference) VALUES (18, 4, 18);
 INSERT INTO Copy (id, aisleID, reference) VALUES (19, 4, 19);
 INSERT INTO Copy (id, aisleID, reference) VALUES (20, 4, 20);
 
+
+-- ********* BORROWINGS ZONE ********* --
 INSERT INTO Borrower (id, name, fst_name, address, phone, category) VALUES (1, 'Dupont', 'Dupond', 'chemin des Dupon 49000 Angers', 0745821559, 'Public');
 INSERT INTO Borrower (id, name, fst_name, address, phone, category) VALUES (2, 'Legendre', 'Florian', '2 avenue des Gorons 69000 Lyon', 1265071501, 'Professional');
 INSERT INTO Borrower (id, name, fst_name, address, phone, category) VALUES (3, 'Berthelot', 'Yann', '3 strada italiana 00144 Rome', 2000121212, 'Professional');
