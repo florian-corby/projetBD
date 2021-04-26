@@ -95,26 +95,57 @@ WHERE e.name NOT IN(
 );
 
 
-
 -- ***** (11) *****
 
-
+SELECT bwr.name
+FROM Borrower bwr
+WHERE bwr.id NOT IN(
+    SELECT b.borrower
+    FROM Borrow b
+    GROUP BY b.borrower
+);
 
 -- ***** (12) *****
 
-
+SELECT *
+FROM Document d
+WHERE d.reference NOT IN(
+    SELECT c.reference
+    FROM Copy c, Borrow b
+    WHERE c.id = b.copy
+);
 
 -- ***** (13) *****
 
-
-
+SELECT DISTINCT bwr.name, bwr.fst_name
+FROM Borrower bwr, Borrow b, Copy c, Document d
+WHERE bwr.category = 'Professional'
+    AND bwr.id = b.borrower
+    AND d.category = 'DVD'
+    AND b.copy = c.id
+    AND c.reference = d.reference
+    AND b.borrowing_date >= to_date('25/10/2020', 'DD/MM/YYYY')
+;
 -- ***** (14) *****
 
-
+SELECT *
+FROM Document d
+WHERE qte > (
+    SELECT AVG(qte)
+    FROM Document d
+);
 
 -- ***** (15) *****
 
-
+SELECT DISTINCT a.name
+FROM Author a, Document d
+WHERE d.theme = 'informatique'
+    AND a.id = d.author
+    AND a.id IN (
+        SELECT d.author
+        FROM Document d
+        WHERE d.theme = 'mathematiques'
+);
 
 -- ***** (16) *****
 
