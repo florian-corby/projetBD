@@ -99,11 +99,11 @@ INSERT INTO Document (reference, title, qte, editor, theme, category, pages, tim
 INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (13, 'Elon Musk in space', 5, 'DupondEtDupont', 'anglais', 'DVD', null, 75, null, null);
 INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (14, 'Brian is in the kitchen', 1, 'DupondEtDupont', 'anglais', 'DVD', null, 83, null, null);
 INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (15, 'Apprendre Symfony en 150 minutes', 7, 'Dunod', 'informatique', 'DVD', null, 151, null, null);
-INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (16, 'Premiers pas en informatique', 10, 'Laffont', 'informatique', 'Video', null, 15, null, 'MP4');
-INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (17, 'Tout savoir sur la physique quantique', 2, 'Eyrolles', 'physique', 'Video', null, 2, null, 'AVI');
-INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (18, 'Les etoiles de Thomas Pesquet', 4, 'Laffont', 'physique', 'Video', null, 65, null, 'FLV');
-INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (19, 'Les logiciels pour Mac', 3, 'Dunod', 'informatique', 'Video', null, 3, null, 'WMV');
-INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (20, 'Linux contre Windows', 7, 'Eyrolles', 'informatique', 'Video', null, 76, null, 'MOV');
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (16, 'Premiers pas en informatique', 10, 'Laffont', 'informatique', 'Video', null, 15, 'MP4', null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (17, 'Tout savoir sur la physique quantique', 2, 'Eyrolles', 'physique', 'Video', null, 2, 'AVI', null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (18, 'Les etoiles de Thomas Pesquet', 4, 'Laffont', 'physique', 'Video', null, 65, 'FLV', null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (19, 'Les logiciels pour Mac', 3, 'Dunod', 'informatique', 'Video', null, 3, 'WMV', null);
+INSERT INTO Document (reference, title, qte, editor, theme, category, pages, time, format, nbSubtitles) VALUES (20, 'Linux contre Windows', 7, 'Eyrolles', 'informatique', 'Video', null, 76, 'MOV', null);
 
 INSERT INTO DocumentAuthors (reference, author_id) VALUES (1, 1);
 INSERT INTO DocumentAuthors (reference, author_id) VALUES (2, 10);
