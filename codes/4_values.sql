@@ -172,7 +172,6 @@ INSERT INTO DocumentKeywords (reference, keyword) VALUES (19, 'Mac');
 INSERT INTO DocumentKeywords (reference, keyword) VALUES (20, 'controversial');
 INSERT INTO DocumentKeywords (reference, keyword) VALUES (20, 'Systeme');
 
-
 INSERT INTO Copy (id, aisleID, reference) VALUES (1, 1, 1);
 INSERT INTO Copy (id, aisleID, reference) VALUES (2, 1, 2);
 INSERT INTO Copy (id, aisleID, reference) VALUES (3, 1, 3);

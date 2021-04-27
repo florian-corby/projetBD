@@ -1,0 +1,826 @@
+-- //////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+-- //////////////////////////////////////// TP1 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+-- //////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+-- ================================== --
+-- ========= (TP1 - Script) ========= --
+-- ================================== --
+DROP TABLE Ligue CASCADE CONSTRAINTS;  
+CREATE TABLE Ligue (
+  ligueId INT, 
+  nom_ligue VARCHAR2(100), 
+  pays VARCHAR2(100), 
+  CONSTRAINT PK_Ligue PRIMARY KEY (ligueId)); 
+  
+DROP TABLE Equipe CASCADE CONSTRAINTS;
+CREATE TABLE Equipe (
+  equipeId INT, 
+  nom_equipe VARCHAR2(100), 
+  nom_court VARCHAR2(3), 
+  ligueId INT, 
+  CONSTRAINT PK_Equipe PRIMARY KEY (equipeId),
+  CONSTRAINT FK_Equipe_Ligue FOREIGN KEY(ligueId) REFERENCES Ligue(ligueId)); 
+
+DROP TABLE Joueur CASCADE CONSTRAINTS;
+CREATE TABLE Joueur (
+  joueurId INT, 
+  nom_joueur VARCHAR2(100), 
+  prenom_joueur VARCHAR2(100), 
+  dateNaissance date, 
+  taille number(3,2), 
+  poids number(5,2), 
+  CONSTRAINT PK_Joueur PRIMARY KEY (joueurId));
+
+DROP TABLE Match CASCADE CONSTRAINTS;
+CREATE TABLE Match (
+  matchId int, 
+  dateMatch date, 
+  scoreLocale number(2),
+  scoreVisiteur number(2), 
+  equipeLocale int, 
+  equipeVisiteur int, 
+  CONSTRAINT PK_Match PRIMARY KEY (matchId),
+  CONSTRAINT FK_Match_Equipe_1 FOREIGN KEY(equipeLocale) REFERENCES Equipe(equipeId),
+  CONSTRAINT FK_Match_Equipe_2 FOREIGN KEY(equipeVisiteur) REFERENCES Equipe(equipeId)); 
+
+DROP TABLE Saison CASCADE CONSTRAINTS;
+CREATE TABLE Saison (
+  saisonId int, 
+  libelle VARCHAR2(100), 
+  dateDeb date, 
+  dateFin date, 
+  CONSTRAINT PK_Saison PRIMARY KEY (saisonId));
+
+DROP TABLE Engager CASCADE CONSTRAINTS;
+CREATE TABLE Engager (
+  equipeId int, 
+  joueurId int, 
+  saisonId int, 
+  CONSTRAINT PK_Engager PRIMARY KEY (equipeId,  joueurId,  saisonId),
+  CONSTRAINT FK_Engager_Equipe FOREIGN KEY(equipeId) REFERENCES Equipe(equipeId),
+  CONSTRAINT FK_Engager_Joueur FOREIGN KEY(joueurId) REFERENCES Joueur(joueurId),
+  CONSTRAINT FK_Engager_Saison FOREIGN KEY(saisonId) REFERENCES Saison(saisonId)
+  );
+
+DROP TABLE Marquer CASCADE CONSTRAINTS;  
+CREATE TABLE Marquer (
+  joueurId int, 
+  matchId int, 
+  minute number(3),
+  CONSTRAINT PK_Marquer PRIMARY KEY (joueurId,  matchId, minute),
+  CONSTRAINT FK_Marquer_Joueur FOREIGN KEY(joueurId) REFERENCES Joueur(joueurId),
+  CONSTRAINT FK_Marquer_Match FOREIGN KEY(matchId) REFERENCES Match(matchId));
+
+alter table Marquer add seconde number(2);
+alter table ligue modify nom_ligue varchar2(150);
+
+insert into ligue 
+ select l.id, l.name, c.name 
+   from dataL3.league l, dataL3.country c 
+  where l.country_id = c.id;
+  
+insert into equipe 
+select distinct team_api_id, team_long_name, team_short_name, league_id
+  from dataL3.team t, dataL3.match m
+ where m.home_team_api_id = t.team_api_id ;
+
+drop sequence seq_saison;
+create sequence seq_saison;
+create or replace trigger trig_seq_saison
+before insert on saison
+for each row
+begin
+select seq_saison.nextval into :new.saisonId from dual;
+end;
+/
+
+insert into saison (libelle, dateDeb, dateFin) 
+select distinct season, 
+                to_date('01/08/' || substr(season, 1, 4),'DD/MM/YYYY'),
+				to_date('30/06/' || substr(season, 6, 4),'DD/MM/YYYY')
+  from dataL3.match;
+
+insert into joueur (joueurId, nom_joueur, prenom_joueur, dateNaissance, taille, poids)
+select p.player_api_id, 
+       substr(p.player_name,instr(p.player_name, ' ', 1)+1), 
+       substr(p.player_name, 1, instr(p.player_name, ' ', 1)-1),
+       to_date(p.birthday, 'YYYY-MM-DD HH24:MI:SS'), 
+	   p.height/100, 
+	   p.weight/2.2046 
+from dataL3.player p;
+
+insert into match (matchId, dateMatch, scoreLocale, scoreVisiteur, equipeLocale, equipeVisiteur)
+select id, 
+       to_date(mdate, 'YYYY-MM-DD HH24:MI:SS'), 
+	   home_team_goal,
+	   away_team_goal,
+	   home_team_api_id,
+	   away_team_api_id
+  from dataL3.match;
+  
+insert into engager (equipeId, joueurId, saisonId)
+select distinct home_team_api_id, home_player_1, (select saisonId from saison where libelle = season) from dataL3.match where home_player_1 is not null
+union
+select distinct away_team_api_id, away_player_1, (select saisonId from saison where libelle = season) from dataL3.match where away_player_1 is not null
+union
+select distinct home_team_api_id, home_player_2, (select saisonId from saison where libelle = season) from dataL3.match where home_player_2 is not null
+union
+select distinct away_team_api_id, away_player_2, (select saisonId from saison where libelle = season) from dataL3.match where away_player_2 is not null
+union
+select distinct home_team_api_id, home_player_3, (select saisonId from saison where libelle = season) from dataL3.match where home_player_3 is not null
+union
+select distinct away_team_api_id, away_player_3, (select saisonId from saison where libelle = season) from dataL3.match where away_player_3 is not null
+union
+select distinct home_team_api_id, home_player_4, (select saisonId from saison where libelle = season) from dataL3.match where home_player_4 is not null
+union
+select distinct away_team_api_id, away_player_4, (select saisonId from saison where libelle = season) from dataL3.match where away_player_4 is not null
+union
+select distinct home_team_api_id, home_player_5, (select saisonId from saison where libelle = season) from dataL3.match where home_player_5 is not null
+union
+select distinct away_team_api_id, away_player_5, (select saisonId from saison where libelle = season) from dataL3.match where away_player_5 is not null
+union
+select distinct home_team_api_id, home_player_6, (select saisonId from saison where libelle = season) from dataL3.match where home_player_6 is not null
+union
+select distinct away_team_api_id, away_player_6, (select saisonId from saison where libelle = season) from dataL3.match where away_player_6 is not null
+union
+select distinct home_team_api_id, home_player_7, (select saisonId from saison where libelle = season) from dataL3.match where home_player_7 is not null
+union
+select distinct away_team_api_id, away_player_7, (select saisonId from saison where libelle = season) from dataL3.match where away_player_7 is not null
+union
+select distinct home_team_api_id, home_player_8, (select saisonId from saison where libelle = season) from dataL3.match where home_player_8 is not null
+union
+select distinct away_team_api_id, away_player_8, (select saisonId from saison where libelle = season) from dataL3.match where away_player_8 is not null
+union
+select distinct home_team_api_id, home_player_9, (select saisonId from saison where libelle = season) from dataL3.match where home_player_9 is not null
+union
+select distinct away_team_api_id, away_player_9, (select saisonId from saison where libelle = season) from dataL3.match where away_player_9 is not null
+union
+select distinct home_team_api_id, home_player_10, (select saisonId from saison where libelle = season) from dataL3.match where home_player_10 is not null
+union
+select distinct away_team_api_id, away_player_10, (select saisonId from saison where libelle = season) from dataL3.match where away_player_10 is not null
+union
+select distinct home_team_api_id, home_player_11, (select saisonId from saison where libelle = season) from dataL3.match where home_player_11 is not null
+union
+select distinct away_team_api_id, away_player_11, (select saisonId from saison where libelle = season) from dataL3.match where away_player_11 is not null;
+
+
+-- //////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+-- //////////////////////////////////////// TP2 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+-- //////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+-- =========================================================== --
+-- ========= (A - Organisation physique des données) ========= --
+-- =========================================================== --
+
+-- A.1)
+SHOW PARAMETER DB_BLOCK_SIZE; -- 8,192Ko par bloc
+
+
+-- A.2)
+SELECT * FROM user_segments WHERE segment_name = 'JOUEUR'; -- 72 blocs
+SELECT COUNT(*) FROM JOUEUR; -- 11 060 lignes dans la table
+
+-- CCL: 11 060 / 72 = 153.6111 lignes par bloc en moyenne
+--      8,192 / 153.611 = 53.54 octets en moyenne par ligne
+
+
+-- A.3)
+SHOW PARAMETER DB_FILE_MULTIBLOCK_READ_COUNT; -- 128 blocs consécutifs lus par I/O
+
+-- CCL: SI les 72 blocs sont consécutifs (meilleur des cas) => 1 I/O donc pour la tableau joueur 
+--      => index inutile (il faudrait de toute façon 1 I/O minimum pour lire l'index).
+--      SI pire des cas: 72 I/O (cf. clustering_factor) => index peut-être utile
+
+
+-- A.4)
+EXEC dbms_stats.gather_schema_stats ('L3IT27') ;
+SELECT INDEX_NAME, CLUSTERING_FACTOR FROM user_indexes; -- Les clés primaires sont des indexes
+                                                        -- 2e colonne, INDEX_TYPE = NORMAL = Arbres B+ par défaut (arbres B ne sont plus utilisés quasiment...)
+                                                        -- Ordre assez grand => hauteurs petites quand peu de clés...
+
+-- CLUSTERING_FACTOR: Est-ce que physiquement (blocs 1 puis 2 puis...) ma table est triée et organisée par rapport à l'index (ligne 1 puis 2 puis...)
+-- CLUSTERING_FACTOR: [nb_blocs_tables; nb_lignes_tables]
+-- Utile pour les requêtes où on cherche dans un intervalle de valeurs (car là il faut aller chercher dans le bloc n°x, le bloc n°y, etc.
+                            
+-- A.5)
+SELECT SEGMENT_NAME, BLEVEL, LEAF_BLOCKS, bytes, blocks 
+FROM user_segments 
+LEFT JOIN user_indexes ON user_indexes.index_name = user_segments.segment_name;
+
+
+
+-- ========================================================================= --
+-- ========= (B - Gestion des statistiques sur la base de données) ========= --
+-- ========================================================================= --
+
+-- B.1)
+
+-- B.2)
+
+-- B.3)
+
+-- B.4)
+
+-- B.5)
+
+-- B.6)
+
+
+-- =================================================================== --
+-- ========= (C - Analyse du plan d'exécution d'une requête) ========= --
+-- =================================================================== --
+
+---- forcer l ’ utilisation d ’ un index
+--SELECT /* + INDEX ( nom_table nom_index ) */ col1 , col2 FROM ...
+---- empêcher d’utiliser un index
+--SELECT /* + NO_INDEX ( nom_table nom_index ) */ col1 , col2 FROM ...
+
+-- C.1)
+SET AUTOTRACE ON EXPLAIN;
+SET TIMING ON;
+DESC Joueur;
+
+SELECT * FROM Joueur WHERE TAILLE >= 2;
+
+-- C.2)
+SELECT * FROM Joueur WHERE JOUEURID = 46509;
+
+-- C.3)
+DESC Match;
+
+SELECT match.datematch, nom_equipe
+FROM match
+INNER JOIN Equipe ON match.equipelocale = equipe.equipeid;
+
+
+
+-- ===================================================================== --
+-- ========= (D - Optimisation de requêtes en créant un index) ========= --
+-- ===================================================================== --
+
+---- index btree
+--CREATE INDEX nom_index ON nom_table ( nom_colonne )
+---- index btree sur l’application d’une fonction à une colonne
+--CREATE INDEX nom_index ON nom_table ( fonction ( nom_colonne ) )
+---- index bitmap
+--CREATE BITMAP INDEX nom_index ON nom_table ( nom_colonne )
+
+
+-- D.1)
+create index idx_joueur on joueur(nom_joueur);
+SELECT *
+FROM Joueur
+WHERE NOM_JOUEUR > 'von'; --Index servirait ici car 3 ligne + index => coût 4 (4 I/O) au maximum (les noms sont tous les 3 dans des blocs différents)
+                          --create index idx_joueur on joueur(nom_joueur)
+
+-- D.2)
+SELECT *
+FROM Joueur
+WHERE NOM_JOUEUR < 'von'; --Index ne servirait à rien aussi. Coût 19 = coût de toute la table lue
+
+-- D.3)
+SELECT *
+FROM Joueur
+WHERE NOM_JOUEUR > 'van'; --124 noms qui ressortent => coût 19 fortement probable (sauf si les noms sont dans un même bloc)
+
+-- D.4)
+SELECT *
+FROM Joueur
+WHERE PRENOM_JOUEUR IS NULL; --Les valeurs null ne sont pas indexées ni indexables donc l'index ne servirait de toute façon à rien
+
+-- D.5)
+SELECT *
+FROM Joueur
+WHERE NOM_JOUEUR LIKE 'Ib%'; --14 noms => index utile
+
+-- D.6)
+SELECT *
+FROM Joueur
+WHERE NOM_JOUEUR LIKE '%oz'; --9 noms => doit tout parcourir de toute façon pour vérifier si ça se termine par 'oz' donc index inutile
+                             --          car index dans l'ordre alphabétique (Ex. comment chercher les mots qui se terminent par 'oz' dans un dictionnaire?)
+
+SELECT /*+ INDEX ( joueur idx_joueur ) */ *
+FROM Joueur
+WHERE NOM_JOUEUR LIKE '%oz';
+
+-- D.7)
+SELECT COUNT(*)
+FROM Joueur
+WHERE NOM_JOUEUR LIKE '%oz'; -- Avec SELECT * il doit parcourir l'index et la table car le * implique des informations que n'a 
+                             -- pas l'index (l'index n'a que le nom_joueur ici). Là il n'a besoin que de l'index pour compter.
+                             -- On retrouve le même comportement quand SELECT nom_joueur précédemment
+
+-- D.8)
+SELECT *
+FROM Joueur
+WHERE upper(NOM_JOUEUR) = 'MACDONALD'; --upper => on peut chercher indépendamment de la casse
+                                       --Problème => l'index respecte la casse pour son ordre...
+                                       --Solution => create idx_joueur_upper on joueur(upper(nom_joueur));
+
+-- D.9)
+select distinct taille from joueur; --20 tailles différentes
+
+CREATE BITMAP INDEX bidx_joueur_taille ON joueur(taille);
+
+SELECT /*+ NO_INDEX ( joueur bidx_joueur_taille ) */ *
+FROM Joueur
+WHERE TAILLE = 1.57 OR TAILLE = 1.6 OR TAILLE = 1.63;
+
+SELECT *
+FROM Joueur
+WHERE TAILLE = 1.57 OR TAILLE = 1.6 OR TAILLE = 1.63; --L'information taille n'est pas dans l'index donc inutile
+                                                      --Mais on peut faire un index bitmap car que 20 tailles donc 20 colonnes
+
+-- D.10)
+SELECT *
+FROM Joueur
+WHERE NOM_JOUEUR LIKE 'M%' AND TAILLE = 2.03; 
+
+-- D.11)
+SELECT *
+FROM Joueur
+WHERE TAILLE = 1.96 AND NOM_JOUEUR LIKE 'Z%';
+
+-- D.12)
+select * 
+from joueur 
+where taille not in (1.65,1.68,1.7,1.73,1.75,1.78,1.8,1.83,1.85,1.88,1.91,1.93,1.96,1.98,2.01,2.03,2.08);
+--L'optimiseur se dit qu'on cherche quelque-chose qui n'est pas dans quelque-chose donc il n'utilise pas l'index
+
+select * 
+from joueur 
+where taille in (1.57, 1.6, 1.63); --L'index est utilisé
+
+-- D.13)
+
+-- D.14)
+
+-- D.15)
+
+
+-- ================================================== --
+-- ========= (E - Gestion des transactions) ========= --
+-- ================================================== --
+
+-- E.1)
+INSERT INTO Ligue(ligueId, nom_ligue, pays) VALUES(2, 'National 3', 'France');
+--Rollback si arrêt brutal
+SELECT * FROM Ligue;
+
+
+-- E.2)
+SHOW AUTOCOMMIT; --Affiche la valeur de la variable autocommit
+SET AUTOCOMMIT OFF; 
+--L'autocommit => une requête = un commit
+
+--Quand l'autocommit est off la première instruction ci-dessous s'exécute. Une ligne est alors ajoutée.
+--On fait le rollback. Le rollback revient au dernier commit. La ligne ajoutée est donc supprimée.
+--On tente un second ajout dont le dernier attribut est une clef étrangère qui devrait exister SI on avait fait 
+--l'ajout précédent. L'ajout échoue donc.
+
+--Quand l'autocommit est on la première ligne est ajoutée ET un commit est fait. Le rollback est ensuite fait, ce qui
+--correspond au moment où on a ajouté la ligne précédente. Le second ajout fonctionne alors. Le roolback ne servait alors
+--à rien.
+
+INSERT INTO Ligue(ligueId, nom_ligue, pays) VALUES(2, 'National 3', 'France');
+ROLLBACK;
+INSERT INTO Equipe(equipeID, nom_equipe, nom_court, ligueID) VALUES(1, 'Poitiers Football Clu b', 'PFC', 2);
+COMMIT;
+
+
+-- E.3)
+INSERT INTO MATCH(matchId, equipeLocale, equipeVisiteur) VALUES(26000,7794,7896);
+UPDATE MATCH SET dateMatch = to_date('01/01/18', 'DD/MM/YY') WHERE equipeLocale=7794 AND equipeVisiteur=7896;
+SAVEPOINT toto;
+UPDATE MATCH SET scoreLocale=1, scoreVisiteur=2 WHERE equipeLocale=7794 AND equipeVisiteur=7896;
+ROLLBACK TO toto;
+SELECT * FROM Match WHERE matchId = 26000;
+
+
+-- E.4)
+-- oui
+
+--==================================
+--============ COURS ===============
+--==================================
+--LOCK TABLE nom_table IN EXCLUSIVE MOVE --Verrou explicite en Ecriture
+--LOCK TABLE nom_table IN SHARE MODE --Verrou explicite en Lecture
+
+-- E.5)
+COMMIT; --Tant qu'on n'a pas fait ce commit, l'autre utilisateur (second sqldeveloper ouvert avec nos identifiants suffit) reste bloqué dans son exécution de tâche.
+        --Ceci car un insert/update/delete => verrou implicite en écriture
+
+
+-- E.6)
+LOCK TABLE Match IN EXCLUSIVE MODE; --On fait en share mode sur le second utilisateur => bloqué sur le script-runner
+--SELECT * FROM Match WHERE Match.id = 26000 FOR UPDATE; -- LOCK d'une ligne en mode semi-écriture/lecture...
+COMMIT;
+
+-- E.7)
+LOCK TABLE Match IN SHARE MODE; --On fait lock en lecture ici puis second utilisateur
+LOCK TABLE Match IN EXCLUSIVE MODE; --Quand on tente verrou en écriture après tout ça -> bloqué sur script-runner
+
+-- E.8)
+LOCK TABLE Match IN SHARE MODE; --On fait ça dans utilisateur1 puis dans utilisateur2
+LOCK TABLE Match IN EXCLUSIVE MODE; --On fait ça dans utilisateur1 puis dans utilisateur2 et là => interblocage détecté
+                                    -- ORA-00060: détection d'interblocage pendant l'attente d'une ressource
+
+
+-- E.9)
+CREATE VIEW toto AS SELECT * FROM Joueur;
+LOCK TABLE toto IN EXCLUSIVE MODE; --TOUTES les tables dans le FROM de la vue, peu importe la vue, seront bloquées
+                                    --Les SELECT ne sont pas bloqués => se basent sur le dernier commit.
+
+
+
+-- //////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+-- //////////////////////////////////////// TP3 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+-- //////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+-- ================================================== --
+-- =========== (A - Utilisation des vues) =========== --
+-- ================================================== --
+
+-- A.1)
+
+CREATE VIEW nbButs_2015_2016 AS
+SELECT ligue.nom_ligue, SUM(match.scorelocale + match.scorevisiteur) as nb_buts
+FROM match, saison, ligue, equipe
+WHERE match.datematch >= saison.datedeb AND match.datematch <= saison.datefin
+      AND match.equipelocale = equipe.equipeid
+      AND equipe.ligueid = ligue.ligueid
+      AND saison.libelle='2015/2016'
+GROUP BY ligue.ligueid, ligue.nom_ligue
+ORDER BY SUM(match.scorelocale + match.scorevisiteur) DESC;
+
+-- A.2)
+create or replace view match_aller as 
+select nom_equipe as equipe,
+        CASE 
+         WHEN scorelocale > scorevisiteur then 3
+         WHEN scorelocale = scorevisiteur then 1
+         ELSE 0
+        END as Pts
+from match, equipe, ligue, saison
+where match.datematch between saison.datedeb and saison.datefin
+ and match.equipelocale = equipe.equipeid
+ and equipe.ligueid = ligue.ligueid
+ and saison.libelle = '2014/2015'
+ and ligue.nom_ligue = 'France Ligue 1';
+
+ create or replace view match_retour as 
+select nom_equipe as equipe,
+        CASE 
+         WHEN scorelocale < scorevisiteur then 3
+         WHEN scorelocale = scorevisiteur then 1
+         ELSE 0
+        END as Pts
+from match, equipe, ligue, saison
+where match.datematch between saison.datedeb and saison.datefin
+ and match.equipevisiteur = equipe.equipeid
+ and equipe.ligueid = ligue.ligueid
+ and saison.libelle = '2014/2015'
+ and ligue.nom_ligue = 'France Ligue 1';
+
+ create or replace view equipe_point as
+(select * from match_aller)
+union all
+(select * from match_retour);
+
+select Equipe, sum(pts), count(*)
+from Equipe_point 
+group by Equipe 
+order by sum(pts) desc;
+
+-- => Les vues permettent de faire des requêtes complexes en décomposant
+
+
+
+-- A.3)
+
+--
+create or replace view match_aller_full as 
+select nom_equipe as equipe,
+        CASE 
+            WHEN scorelocale > scorevisiteur then 3
+            WHEN scorelocale = scorevisiteur then 1
+            ELSE 0
+        END as Pts,
+        CASE WHEN scorelocale > scorevisiteur then 1 else 0 END as G,
+        CASE WHEN scorelocale = scorevisiteur then 1 else 0 END  as N,
+        CASE WHEN scorelocale < scorevisiteur then 1 else 0 END  as P,
+        scorelocale as BP,
+        scorevisiteur as BC,
+        scorelocale-scorevisiteur as DB  
+from match, equipe, ligue, saison
+where match.datematch between saison.datedeb and saison.datefin
+ and match.equipelocale = equipe.equipeid
+ and equipe.ligueid = ligue.ligueid
+ and saison.libelle = '2014/2015'
+ and ligue.nom_ligue = 'France Ligue 1';
+
+--
+create or replace view match_retour_full as 
+select nom_equipe as equipe,
+        CASE 
+            WHEN scorelocale < scorevisiteur then 3
+            WHEN scorelocale = scorevisiteur then 1
+            ELSE 0
+        END as Pts,
+        CASE WHEN scorelocale < scorevisiteur then 1 else 0 END as G,
+        CASE WHEN scorelocale = scorevisiteur then 1 else 0 END  as N,
+        CASE WHEN scorelocale > scorevisiteur then 1 else 0 END  as P,
+        scorevisiteur as BP,
+        scorelocale as BC,
+        scorevisiteur-scorelocale as DB  
+from match, equipe, ligue, saison
+where match.datematch between saison.datedeb and saison.datefin
+ and match.equipevisiteur = equipe.equipeid
+ and equipe.ligueid = ligue.ligueid
+ and saison.libelle = '2014/2015'
+ and ligue.nom_ligue = 'France Ligue 1';
+
+--
+create or replace view equipe_point_full as
+(select * from match_aller_full)
+union all
+(select * from match_retour_full);
+
+--
+select Equipe, sum(pts), count(*) as MJ, sum(G) as Gagne, sum(N) as Nul, sum(P) as Perdu, sum(BP) as But_Pour, sum(BC) as But_Contre
+from Equipe_point_full
+group by Equipe 
+order by sum(pts) desc;
+
+
+
+-- A.4)
+
+create or replace view joueur_sup_90 as
+select *
+from joueur
+where datenaissance > to_date('01/01/1990', 'DD/MM/YYYY');
+
+
+-- A.5)
+--Il est possible d'insérer/supprimer (et donc mettre à jour) des joueurs dans la vue joueur_sup_90, y compris des
+--joueurs nés avant les années 90... 
+-- Pour pallier ça: 
+-- CREATE OR REPLACE VIEW nom_vue AS (requete)
+-- WITH CHECK OPTION CONSTRAINT nom_contrainte
+-- Si on insère dans la table on verra la màj dans la vue car vue = alias de requête => recalcul
+
+
+-- A.6)
+create or replace view equipes_ligues as
+select equipe.equipeid, equipe.nom_equipe, ligue.nom_ligue, ligue.pays
+from equipe
+inner join ligue on equipe.ligueid = ligue.ligueid
+order by ligue.pays asc;
+
+
+-- A.7)
+--Voir ci-dessous
+
+
+-- A.8)
+select * from user_updatable_columns
+where table_name = 'EQUIPES_LIGUES'; --le nom de la vue doit être en majuscules ici (et entre quotes)!
+-- Comme le nom de la ligue/pays sont répétées il y a ambigüité en cas de màj: tous les champs ou seulement un? Donc
+-- il interdit les màj.
+
+
+-- A.9)
+SET AUTOTRACE ON EXPLAIN;
+SET TIMING ON;
+
+SELECT Equipe.nom_equipe, MATCH.dateMatch
+FROM Equipe, MATCH
+WHERE Equipe.equipeid = MATCH.equipelocale;
+--L'optimiseur doit calculer une jointure
+
+
+-- A.10)
+--grant create materialized view to tp; => sur compte administrateur
+drop materialized view equipes_matchs;
+
+CREATE MATERIALIZED VIEW equipes_matchs
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT --Ou complete et/Ou ON DEMAND => EXECUTE DBMS MVIEW.REFRESH('nom vue')
+ENABLE QUERY REWRITE
+AS SELECT Equipe.nom_equipe, MATCH.dateMatch
+FROM Equipe, MATCH
+WHERE Equipe.equipeid = MATCH.equipelocale;
+--On crée ici une vue matérialisée que l'optimiseur utilisera probablement pour éviter un recalcul de jointure
+
+
+-- A.11)
+SELECT Equipe.nom_equipe, MATCH.dateMatch
+FROM Equipe, MATCH
+WHERE Equipe.equipeid = MATCH.equipelocale; 
+--L'optimiseur va maintenant chercher directement dans la vue matérialisée au lieu de recalculer la jointure
+
+
+-- A.12)
+CREATE MATERIALIZED VIEW ligues_cv_demand_complete
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON DEMAND
+ENABLE QUERY REWRITE
+AS SELECT ligueid , nom_ligue
+FROM Ligue;
+
+CREATE MATERIALIZED VIEW ligues_cv_oncommit_complete
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT
+ENABLE QUERY REWRITE
+AS SELECT ligueid , nom_ligue
+FROM Ligue;
+
+
+
+CREATE MATERIALIZED VIEW LOG ON Ligue; 
+--On crée autant de journal (log) que de tables utilisées dans la requête de la vue matérialisée
+
+CREATE MATERIALIZED VIEW ligues_cv_demand_fast
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH fast ON DEMAND
+ENABLE QUERY REWRITE
+AS SELECT ligueid , nom_ligue
+FROM Ligue;
+
+CREATE MATERIALIZED VIEW ligues_cv_oncommit_fast
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH fast ON COMMIT
+ENABLE QUERY REWRITE
+AS SELECT ligueid , nom_ligue
+FROM Ligue;
+
+
+-- A.13)
+insert into ligue (ligueid, nom_ligue) values (100000, 'ligue_exemple');
+delete from ligue where ligueid = 100000;
+EXECUTE DBMS_MVIEW.REFRESH('ligues_cv_demand_complete');
+EXECUTE DBMS_MVIEW.REFRESH('ligues_cv_demand_fast');
+
+
+-- ===================================================== --
+-- =========== (B - Contraintes d'intégrité) =========== --
+-- ===================================================== --
+
+-- ALTER TABLE nom_table ADD CONSTRAINT nom_contrainte UNIQUE (colonne);
+-- ALTER TABLE nom_table ADD CONSTRAINT nom_contrainte CHECK (condition);
+
+-- Avec un CHECK on peut tester n'importe quoi sur n'importe quelle colonne d'UNE table.
+-- Dès que plus d'une table (produit cartésien, jointure...) => Trigger
+
+-- B.1)
+ALTER TABLE joueur ADD CONSTRAINT ck_joueur_taille CHECK (taille > 1.5 AND taille < 2.5);
+
+
+-- B.2)
+ALTER TABLE joueur ADD CONSTRAINT ck_joueur_nom CHECK (nom_joueur is not null);
+
+
+-- B.3)
+ALTER TABLE match ADD CONSTRAINT ck_match_date CHECK (datematch is not null);
+
+
+-- B.4)
+ALTER TABLE Ligue ADD CONSTRAINT ck_ligue_pays unique(pays);
+
+
+-- B.5)
+ALTER TABLE Equipe ADD CONSTRAINT ck_equipe_nom CHECK(nom_equipe <> nom_court);
+
+-- B.6)
+alter table joueur add poste varchar2(100); 
+
+alter table joueur add constraint ck_joueur_poste 
+check (poste in ('Gardien', 'Défenseur', 'Milieu', 'Attaquant')); 
+
+insert into joueur (joueurid, poste) values (14, 'M');
+
+
+-- B.7)
+-- Attention la différence de dates sous Oracle donne une différence de jours pas d'années. D'où le *365.25...
+ALTER TABLE joueur add constraint ck_joueur_age check ((to_date('01/01/2016', 'DD/MM/YY') - dateNaissance) > 14*365.25);
+
+
+-- B.8)
+
+
+-- B.9)
+
+
+-- B.10)
+ALTER TABLE match add constraint ck_match_score check 
+( (scorelocale is null and scorevisiteur is null) 
+or (scorelocale is not null and scorevisiteur is not null) );
+
+
+-- Point cours:
+-- SET CONSTRAINT nom_contrainte DEFERRED ;
+-- ALTER TABLE nom_table MODIFY CONSTRAINT nom_contrainte DISABLE --ou ENABLE
+-- Pour lister les contraintes, utiliser UI de sqldeveloper dans la table voulue > "Contraintes"
+
+-- B.11)
+ALTER TABLE JOUEUR drop constraint ck_joueur_age;
+ALTER TABLE joueur add constraint ck_joueur_age check ((to_date('01/01/2016', 'DD/MM/YY') - dateNaissance) > 14*365.25) deferrable;
+-- On doit préciser qu'une contrainte est différable avant de la différer.
+SET CONSTRAINT ck_joueur_age DEFERRED; --On active le fait que la contrainte est différée
+--Comme la contrainte est différée on peut ajouter des joueurs qui ne respectent pas le contrainte => sera vérifié au moment du commit.
+--Fonctionnalité utilisée pour les transactions notamment quand vérifications contraintes qui demandent insertion d'une donnée qui a une
+--contrainte croisée. Ex. Équipe de joueur = 11 joueurs. Insertion du premier joueur bloquée car pas 11 joueurs?
+--Permet également de gagner un peu de temps lors de l'exécution de scripts...
+--Différer = retarder la vérification mais sera quand même vérifié!
+
+
+-- B.12)
+ALTER TABLE joueur MODIFY CONSTRAINT ck_joueur_age DISABLE;
+
+
+-- B.13)
+--La contrainte différée est plus sûre car vérification avec commit alors que désactivation => on peut oublier et créer des incohérences.
+
+
+
+
+-- ===================================================== --
+-- =========== (C - Déclencheurs (Triggers)) =========== --
+-- ===================================================== --
+
+-- Point cours:
+--CREATE OR REPLACE TRIGGER nom_trigger
+--BEFORE -- ou AFTER
+--INSERT OR DELETE OR UPDATE ON nom_table
+--REFERENCING NEW AS alias_nouveau_tuple
+--OLD AS ancien_tuple
+--FOR EACH ROW WHEN ( condition )
+---- la ligne précédente est à mettre si on veut
+---- que le déclencheur s ’ exécute pour chaque ligne modifiée
+--BEGIN
+--... -- code PL / SQL (~ ADA )
+--END ;
+--/
+
+--SHOW ERRORS
+
+--DROP TRIGGER nom_trigger
+
+--ALTER TRIGGER nom_trigger DISABLE --ou ENABLE
+
+-- Pour afficher un message: DBMS_OUTPUT.PUT_LINE(chaine a afficher) après avoir attribué la valeur ON à l’option SERVEROUTPUT
+
+
+
+
+-- C.1)
+SET SERVEROUTPUT ON;
+-- Si ne marche pas: View > DBMS Output > icône verte '+' > Choix de la connexion où on veut l'output
+
+CREATE OR REPLACE TRIGGER trig_joueur_update
+AFTER INSERT OR UPDATE OR DELETE ON Joueur
+BEGIN
+DBMS_OUTPUT.PUT_LINE('Modification de la base Joueur!');
+END;
+/ 
+-- Le slash dit qu'il ne faut pas l'exécuter mais le compiler! On n'exécute pas car s'exécutera quand modification uniquement...
+-- (Principe du trigger...)
+
+
+-- C.2)
+CREATE OR REPLACE TRIGGER trig_score_match
+AFTER UPDATE OF scorelocale ON match
+FOR EACH ROW --Ex. update match set scorelocale = 1, scorevisiteur = 2; => toutes les lignes modifiées
+BEGIN
+DBMS_OUTPUT.PUT_LINE(:NEW.equipelocale || :NEW.scorelocale || '-' || :NEW.scorevisiteur || :NEW.equipevisiteur);
+dbms_output.enable(5000); --Permet l'affichage
+END ;
+/
+
+update match set scorelocale = 1, scorevisiteur = 2 where matchid = 552 or matchid = 553;
+rollback;
+
+-- C.3)
+
+
+-- C.4)
+
+
+-- C.5)
+CREATE OR REPLACE TRIGGER trig_marquer_joueur
+BEFORE INSERT OR UPDATE ON Marquer
+FOR EACH ROW
+BEGIN
+    select count(*) from match m, engager e, saison s
+    where :new.matchid = m.matchid and m.equipelocale = e.equipeid
+    and e.joueurid = :new.joueurid
+    and m.datematch between s.datedev and s.datefin
+    and e.saisonid = s.saisonid;
+END;
+/

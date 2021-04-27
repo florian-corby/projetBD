@@ -1,0 +1,33 @@
+-- vérifier que le joueur n'a pas moins de 14 ans à la date d'aujourd'hui
+
+create or replace trigger trig_joueur_age
+before insert or update on joueur
+for each row
+begin
+if ((sysdate - :new.datenaissance)/365.25) < 14 then
+  raise_application_error('-20001', 'age inférieur à 14 ans');
+end if;
+end;
+/
+
+insert into joueur (joueurid, datenaissance) values (2, sysdate);
+
+-- vérifier qu'un match est joué entre deux équipes de la même ligue 
+
+create or replace trigger trigg_match_equipe
+before insert on match
+for each row
+begin
+select ligueid into ligue_locale
+  from equipe 
+ where equipeid = :new.equipelocale;
+select ligueid into ligue_visiteur
+  from equipe 
+ where equipeid = :new.equipevisiteur;
+if ligue_locale <>  ligue_visiteur then
+  raise_application_error('-20001', 'les deux équipes ne sont pas de la même ligue');
+end if;
+end;
+/
+
+
