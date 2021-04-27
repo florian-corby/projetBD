@@ -7,10 +7,10 @@
 --                                   Document                                  --
 ---------------------------------------------------------------------------------
 
--- ******* Ajout => Vérification cohérence de la catégorie ******* --
+-- ******* Ajout/Mise à jour => Vérification cohérence de la catégorie ******* --
 
 CREATE OR REPLACE TRIGGER tg_Document_Category 
-BEFORE INSERT ON Document
+BEFORE INSERT OR UPDATE ON Document
 FOR EACH ROW
 BEGIN
 if :new.category = 'Book' and (:new.pages is null 
@@ -39,9 +39,6 @@ then raise_application_error('-20001', 'A Video has a certain duration and video
 end if;
 END;
 /
-
-
--- ******** Màj ******** --
 
 
 -- **** Suppression **** --
