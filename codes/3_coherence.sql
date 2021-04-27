@@ -8,7 +8,6 @@
 ---------------------------------------------------------------------------------
 
 -- ******* Ajout/Mise à jour => Vérification cohérence de la catégorie ******* --
-
 CREATE OR REPLACE TRIGGER tg_Document_Category 
 BEFORE INSERT OR UPDATE ON Document
 FOR EACH ROW
@@ -42,6 +41,46 @@ END;
 
 
 -- **** Suppression **** --
+--SELECT d.reference, d.title, c.id, b.borrowing_date, b.return_date 
+--FROM Document d, Copy c, Borrow b
+--WHERE d.reference = c.reference and c.id = b.copy and b.return_date is null;
+--
+--SELECT d.reference, COUNT(*)
+--FROM Document d, Copy c, Borrow b
+--WHERE d.reference = c.reference and c.id = b.copy and b.return_date is null
+--GROUP BY d.reference;
+--
+--SELECT COUNT(*)
+--FROM Document d, Copy c, Borrow b
+--WHERE 52 = c.reference and c.id = b.copy and b.return_date is null
+--GROUP BY d.reference;
+
+
+
+
+-- ***** Paraît OK mais: il faut des ON DELETE CASCADE. Problème: on ne peut pas faire de requêtes sur la relation qui a 
+-- déclenché le trigger or on doit supprimer en cascade les copies et les emprunts mais le trigger ci-dessous échoue. Seule
+-- solution serait de faire un ON DELETE SET NULL sur la table Copy mais pas trop de sens... Ou alors un ON DELETE SET NULL 
+-- sur Copie et un trigger sur copie qui après la mise à jour l'élimine: ***** --
+
+--CREATE OR REPLACE TRIGGER tg_Document_Suppression 
+--BEFORE DELETE ON Document
+--FOR EACH ROW
+--DECLARE isBeingBorrowed INT;
+--BEGIN
+--    SELECT COUNT(*) into isBeingBorrowed
+--    FROM Copy c, Borrow b
+--    WHERE :old.reference = c.reference and c.id = b.copy and b.return_date is null
+--    GROUP BY :old.reference;
+--    exception when NO_DATA_FOUND then isBeingBorrowed := null;
+--    
+--    if isBeingBorrowed is not null
+--    then raise_application_error('-20001', 'A copy of this document is being borrowed and hence cannot be deleted!');
+--    end if;
+--END;
+--/
+
+--DELETE FROM Document WHERE reference = 18;
 
 
 ---------------------------------------------------------------------------------
