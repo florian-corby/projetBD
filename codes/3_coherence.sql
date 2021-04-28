@@ -40,59 +40,14 @@ END;
 /
 
 
--- **** Suppression **** --
---SELECT d.reference, d.title, c.id, b.borrowing_date, b.return_date 
---FROM Document d, Copy c, Borrow b
---WHERE d.reference = c.reference and c.id = b.copy and b.return_date is null;
---
---SELECT d.reference, COUNT(*)
---FROM Document d, Copy c, Borrow b
---WHERE d.reference = c.reference and c.id = b.copy and b.return_date is null
---GROUP BY d.reference;
---
---SELECT COUNT(*)
---FROM Document d, Copy c, Borrow b
---WHERE 52 = c.reference and c.id = b.copy and b.return_date is null
---GROUP BY d.reference;
-
-
-
-
--- ***** Paraît OK mais: il faut des ON DELETE CASCADE. Problème: on ne peut pas faire de requêtes sur la relation qui a 
--- déclenché le trigger or on doit supprimer en cascade les copies et les emprunts mais le trigger ci-dessous échoue. Seule
--- solution serait de faire un ON DELETE SET NULL sur la table Copy mais pas trop de sens... Ou alors un ON DELETE SET NULL 
--- sur Copie et un trigger sur copie qui après la mise à jour l'élimine: ***** --
-
---CREATE OR REPLACE TRIGGER tg_Document_Suppression 
---BEFORE DELETE ON Document
+-- ******* Ajout => vérif quantité Document ******* --
+--CREATE OR REPLACE TRIGGER tg_Document_IsQteZero
+--BEFORE INSERT ON Document
 --FOR EACH ROW
---DECLARE isBeingBorrowed INT;
 --BEGIN
---    SELECT COUNT(*) into isBeingBorrowed
---    FROM Copy c, Borrow b
---    WHERE :old.reference = c.reference and c.id = b.copy and b.return_date is null
---    GROUP BY :old.reference;
---    exception when NO_DATA_FOUND then isBeingBorrowed := null;
---    
---    if isBeingBorrowed is not null
---    then raise_application_error('-20001', 'A copy of this document is being borrowed and hence cannot be deleted!');
---    end if;
+--
 --END;
 --/
-
---DELETE FROM Document WHERE reference = 18;
-
-
----------------------------------------------------------------------------------
---                                  Emprunteur                                 --
----------------------------------------------------------------------------------
-
--- ******* Catégorie emprunteur change => réévaluer ses documents ******* --
-
-
--- ******* Suppression d'un emprunteur => Aucun document empruntés en cours ******* --
-
-
 
 
 ---------------------------------------------------------------------------------
@@ -100,17 +55,93 @@ END;
 ---------------------------------------------------------------------------------
 
 -- ******* Ajout => Vérification nombre d'emprunts ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrow_VerifMaxBorrow
+--BEFORE INSERT ON Borrow
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 
 
 -- ******* Ajout =>  Aucun retard en cours ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrow_VerifOverdues
+--BEFORE INSERT ON Borrow
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 
 
--- ******* Ajout =>  Màj qte exemplaires ******* --
-
-
--- ******* Màj => Rendu Emprunt => màj quantité exemplaires ******* --
+-- ******* Ajout =>  On ne peut pas l'emprunter si en cours d'emprunt ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrow_VerifIsBeingBorrowed
+--BEFORE INSERT ON Borrow
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 
 
 -- ******* Suppression => Vérification document rendu ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrow_VerifHasBeenReturned -- Doublon avec ci-dessus?
+--BEFORE INSERT ON Borrow
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
+
+
+
+
+---------------------------------------------------------------------------------
+--                                  Emprunteur                                 --
+---------------------------------------------------------------------------------
+
+-- ******* Catégorie emprunteur change => réévaluer ses documents ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrower_AssessDocsToNewRights
+--BEFORE INSERT ON Borrower
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
+
+
+-- ******* Suppression d'un emprunteur => Aucun document empruntés en cours ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrower_VerifNoBeingBorrowedDocs
+--BEFORE INSERT ON Borrower
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
+
+
+
+---------------------------------------------------------------------------------
+--                                  Exemplaire                                 --
+---------------------------------------------------------------------------------
+
+-- ******* Ajout => màj quantité Document ******* --
+--CREATE OR REPLACE TRIGGER tg_Copy_IncreaseDocQte
+--BEFORE INSERT ON Copy
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
+
+
+-- ******* Suppression => màj quantité document ******* --
+--CREATE OR REPLACE TRIGGER tg_Copy_DecreaseDocQte
+--BEFORE INSERT ON Copy
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 
 
