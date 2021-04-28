@@ -108,11 +108,110 @@ END;
 
 
 -- ******* Ajout =>  Aucun retard en cours ******* --
+
+-- Liste toutes les personnes qui ont eu des documents en retard (je fais -1 pour en avoir plus pour l'instant):
+select bwr.id, bwr.name, bwr.category, r.cat_document, r.duration, b.borrowing_date, b.return_date, b.borrowing_date + r.duration-1 as expected_date
+from borrow b, borrower bwr, rights r, copy c, document d
+where bwr.id = b.borrower
+      and b.borrower = bwr.id
+      and b.copy = c.id
+      and c.reference = d.reference
+      and d.category = r.cat_document
+      and bwr.category = r.cat_borrower
+      and b.borrowing_date + r.duration-1 < b.return_date;
+      
+      
+-- Compte, pour chaque personne, le nombre de documents en retard qu'elle a eu en tout:
+select bwr.id, COUNT(*)
+from borrow b, borrower bwr, rights r, copy c, document d
+where bwr.id = b.borrower
+      and b.borrower = bwr.id
+      and b.copy = c.id
+      and c.reference = d.reference
+      and d.category = r.cat_document
+      and bwr.category = r.cat_borrower
+      and b.borrowing_date + r.duration-1 < b.return_date
+GROUP BY bwr.id ORDER BY bwr.id ASC;
+
+
+-- Liste toutes les personnes qui ont actuellement des documents en retard (je fais -1 pour en avoir plus pour l'instant):
+select bwr.id, bwr.name, bwr.category, r.cat_document, r.duration, b.borrowing_date, b.return_date, b.borrowing_date + r.duration-1 as expected_date, sysdate as current_date
+from borrow b, borrower bwr, rights r, copy c, document d
+where bwr.id = b.borrower
+      and b.borrower = bwr.id
+      and b.copy = c.id
+      and c.reference = d.reference
+      and d.category = r.cat_document
+      and bwr.category = r.cat_borrower
+      and b.borrowing_date + r.duration-1 < sysdate
+      and b.return_date is null;
+
+
+-- Compte, pour chaque personne, le nombre de documents qu'elle a actuellement en retard:
+select bwr.id, COUNT(*)
+from borrow b, borrower bwr, rights r, copy c, document d
+where bwr.id = b.borrower
+      and b.borrower = bwr.id
+      and b.copy = c.id
+      and c.reference = d.reference
+      and d.category = r.cat_document
+      and bwr.category = r.cat_borrower
+      and b.borrowing_date + r.duration-1 < sysdate
+      and b.return_date is null
+GROUP BY bwr.id ORDER BY bwr.id ASC;
+      
+      
+-- Le trigger final:
+CREATE OR REPLACE TRIGGER tg_Borrow_VerifOverdues
+BEFORE INSERT ON Borrow
+FOR EACH ROW
+declare 
+nbDocsBeingOverdued INT;
+BEGIN
+    BEGIN
+        select COUNT(*) into nbDocsBeingOverdued
+        from borrow b, borrower bwr, rights r, copy c, document d
+        where bwr.id = :new.borrower
+        and b.borrower = bwr.id
+        and b.copy = c.id
+        and c.reference = d.reference
+        and d.category = r.cat_document
+        and bwr.category = r.cat_borrower
+        and b.borrowing_date + r.duration-1 < sysdate
+        and b.return_date is null
+        GROUP BY bwr.id;
+        EXCEPTION WHEN no_data_found THEN nbDocsBeingOverdued := 0;
+    END;
+    
+    if nbDocsBeingOverdued > 0
+        then raise_application_error('-20001','You cannot borrow any document yet, return your overdued documents first');
+    end if;
+END;
+/
+
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 6, to_date('2021-04-28', 'YYYY-MM-DD'), null);
+--DELETE FROM Borrow WHERE borrower = 15 and copy = 6 and borrowing_date =  to_date('2021-04-28', 'YYYY-MM-DD');
+
+
 --CREATE OR REPLACE TRIGGER tg_Borrow_VerifOverdues
 --BEFORE INSERT ON Borrow
 --FOR EACH ROW
+--declare 
+--return_d borrow.return_date%type;
 --BEGIN
---
+--    select return_date into return_d
+--    from borrow
+--    where borrow.borrower = :new.borrower;
+--    exception when no_data_found then return_d := null;
+--    
+--    if (return_d is null and return_d < sysdate)
+--        then dbms_output.put_line('You are late');
+--    end if;
 --END;
 --/
 

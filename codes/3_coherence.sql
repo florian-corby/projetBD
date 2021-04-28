@@ -40,6 +40,13 @@ END;
 /
 
 
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+
+
+
 
 ---------------------------------------------------------------------------------
 --                                    Emprunt                                  --
@@ -53,20 +60,29 @@ DECLARE
     max_borrow catborrower.borrowing_max%type;
     borrow_nb number;
 BEGIN
-    select catborrower.borrowing_max
-    into max_borrow
+    select catborrower.borrowing_max into max_borrow
     from catborrower
     inner join borrower on borrower.category = catborrower.cat_borrower
     where borrower.id = :new.borrower;
+    
     SELECT count(*)
     into borrow_nb
     from borrow
     where :new.borrower = borrower;
+    
     if borrow_nb +1 > max_borrow
-    then raise_application_error('-20001','You cannot borrow any document yet') ;
+        then raise_application_error('-20001','You have too many documents being borrowed, you cannot borrow any document yet');
     end if;
 END;
 /
+
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+
+
 
 
 -- ******* Ajout =>  Aucun retard en cours ******* --
@@ -74,17 +90,37 @@ CREATE OR REPLACE TRIGGER tg_Borrow_VerifOverdues
 BEFORE INSERT ON Borrow
 FOR EACH ROW
 declare 
-return_d borrow.return_date%type;
+nbDocsBeingOverdued INT;
 BEGIN
-    select return_date
-    into return_d
-    from borrow
-    where borrow.borrower = :new.borrower;
-    if (return_d is null and return_d < sysdate)
-    then dbms_output.put_line('You are late');
+    BEGIN
+        select COUNT(*) into nbDocsBeingOverdued
+        from borrow b, borrower bwr, rights r, copy c, document d
+        where bwr.id = :new.borrower
+        and b.borrower = bwr.id
+        and b.copy = c.id
+        and c.reference = d.reference
+        and d.category = r.cat_document
+        and bwr.category = r.cat_borrower
+        and b.borrowing_date + r.duration-1 < sysdate
+        and b.return_date is null
+        GROUP BY bwr.id;
+        EXCEPTION WHEN no_data_found THEN nbDocsBeingOverdued := 0;
+    END;
+    
+    if nbDocsBeingOverdued > 0
+        then raise_application_error('-20001','You cannot borrow any document yet, return your overdued documents first');
     end if;
 END;
 /
+
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 6, to_date('2021-04-28', 'YYYY-MM-DD'), null);
+--DELETE FROM Borrow WHERE borrower = 15 and copy = 6 and borrowing_date =  to_date('2021-04-28', 'YYYY-MM-DD');
+
 
 
 -- ******* Ajout =>  On ne peut pas l'emprunter si en cours d'emprunt ******* --
@@ -93,15 +129,23 @@ BEFORE INSERT ON Borrow
 FOR EACH ROW
 Declare isBorrowed borrow.copy%type;
 BEGIN
-select copy
-into isBorrowed
-from borrow
-where :new.copy = borrow.copy and borrow.return_date = null;
-if isBorrowed is not null
-then raise_application_error('-20001','Already borrowed and not returned');
-end if;    
+    select copy into isBorrowed
+    from borrow
+    where :new.copy = borrow.copy and borrow.return_date = null;
+    exception when no_data_found then isBorrowed := null;
+    
+    if isBorrowed is not null
+        then raise_application_error('-20001','Already borrowed and not returned');
+    end if;    
 END;
 /
+
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+
 
 
 
@@ -117,6 +161,13 @@ END;
 --
 --END;
 --/
+
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+
 
 
 
