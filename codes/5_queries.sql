@@ -22,8 +22,8 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 -- ***** (3) *****
 
 SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, a.name as Auteur
-FROM Borrower bwr, Borrow b, Copy c, Document d, Author a
-WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference AND d.author = a.id
+FROM Borrower bwr, Borrow b, Copy c, Document d, Author a, DocumentAuthors da
+WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference AND d.reference = da.reference AND da.author_id = a.id
 ORDER BY bwr.name ASC;
 
 
@@ -35,10 +35,6 @@ ORDER BY bwr.name ASC;
 
 -- ***** (5) *****
 
---TODO: Là on a la quantité totale des exemplaire présents à la bibliothèque mais pas la quantité totale en tout:
---Solution la plus simple: rajouter un attribut quantité dans Exemplaire qui donne la quantité courante d'exemplaire présents
---dans la bibliothèque, tandis que l'attribut quantité dans Document nous donnerait la quantité totale (présents et absents) du document
---que possède la bibliothèque:
 SELECT e.name, SUM(d.qte)
 FROM Document d, Editor e
 WHERE e.name = d.editor AND e.name = 'Eyrolles'
@@ -138,26 +134,52 @@ WHERE qte > (
 -- ***** (15) *****
 
 SELECT DISTINCT a.name
-FROM Author a, Document d
+FROM Author a, Document d, DocumentAuthors da
 WHERE d.theme = 'informatique'
-    AND a.id = d.author
+    AND a.id = da.author_id AND da.reference = d.reference
     AND a.id IN (
-        SELECT d.author
-        FROM Document d
-        WHERE d.theme = 'mathematiques'
+        SELECT da.author_id
+        FROM Document d, DocumentAuthors da
+        WHERE d.theme = 'mathematiques' AND d.reference = da.reference
 );
 
 -- ***** (16) *****
 
-
+SELECT d.editor, Max(Quantite)  --pas reussi à trouver le max
+FROM Document d
+WHERE d.editor IN (
+    SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
+    FROM Borrow b, Copy c, Document d
+    WHERE d.reference = c.reference AND c.id = b.copy
+    GROUP BY d.editor
+)
+GROUP BY d.editor
+;
 
 -- ***** (17) *****
 
-
+SELECT DISTINCT d.title  --malheureusement, elle affiche aussi ceux qui ont un mot clef en commun
+FROM Document d
+WHERE d.reference NOT IN
+    ( SELECT d.reference
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls'
+    )
+;
 
 -- ***** (18) *****
 
-
+SELECT DISTINCT d.title
+FROM Document d, DocumentKeywords dk
+WHERE d.reference = dk.reference
+AND dk.keyword IN
+    ( SELECT dk.keyword
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls'
+    )
+;
 
 -- ***** (19) *****
 
