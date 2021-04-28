@@ -52,8 +52,8 @@ END;
 --                                    Emprunt                                  --
 ---------------------------------------------------------------------------------
 
--- ******* Ajout => Vérification nombre d'emprunts ******* --
-CREATE OR REPLACE TRIGGER tg_Borrow_VerifMaxBorrow
+-- ******* Ajout => Vérification nombre d'emprunts en cours ******* --
+CREATE OR REPLACE TRIGGER tg_Borrow_VerifMaxBorrow --TODO: ce doit être les emprunts en cours et non les emprunts totaux
 BEFORE INSERT ON Borrow
 FOR EACH ROW
 DECLARE
