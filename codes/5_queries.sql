@@ -150,18 +150,38 @@ WHERE d.theme = 'informatique'
         WHERE d.theme = 'mathematiques' AND d.reference = da.reference
 );
 
--- ***** (16) ***** TODO
+-- ***** (16) *****
 
-SELECT d.editor, Max(Quantite)  --pas reussi à trouver le max
-FROM Document d
-WHERE d.editor IN (
+--SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
+--    FROM Borrow b, Copy c, Document d
+--    WHERE d.reference = c.reference AND c.id = b.copy
+--    GROUP BY d.editor;
+--    
+--SELECT Max(d.quantite) as Max_Emprunt --affiche la quantité maximum
+--FROM (
+--    SELECT d.editor, COUNT(*) as Quantite 
+--    FROM Borrow b, Copy c, Document d
+--    WHERE d.reference = c.reference AND c.id = b.copy
+--    GROUP BY d.editor
+--) d;
+
+SELECT qte_emprunts_par_editeur.editor, qte_emprunts_par_editeur.quantite
+FROM (
     SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
     FROM Borrow b, Copy c, Document d
     WHERE d.reference = c.reference AND c.id = b.copy
     GROUP BY d.editor
-)
-GROUP BY d.editor
-;
+    ) qte_emprunts_par_editeur
+WHERE qte_emprunts_par_editeur.quantite IN
+(
+    SELECT Max(d.quantite)
+    FROM (
+        SELECT d.editor, COUNT(*) as Quantite 
+        FROM Borrow b, Copy c, Document d
+        WHERE d.reference = c.reference AND c.id = b.copy
+        GROUP BY d.editor
+    ) d
+);
 
 -- ***** (17) ***** TODO
 
