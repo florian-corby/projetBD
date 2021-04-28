@@ -125,13 +125,29 @@ END;
 ---------------------------------------------------------------------------------
 
 -- ******* Ajout => màj quantité Document ******* --
---CREATE OR REPLACE TRIGGER tg_Copy_IncreaseDocQte
---BEFORE INSERT ON Copy
---FOR EACH ROW
---BEGIN
---    
---END;
---/
+CREATE OR REPLACE TRIGGER tg_Copy_IncreaseDocQte
+BEFORE INSERT ON Copy
+FOR EACH ROW
+DECLARE doc_qte INT;
+BEGIN
+    SELECT d.qte INTO doc_qte
+    FROM Document d
+    WHERE :new.reference = d.reference;
+    UPDATE Document SET qte = doc_qte+1 WHERE reference = :new.reference;
+END;
+/
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+--SELECT DISTINCT d.reference, d.title, d.qte
+--FROM Document d, Copy c 
+--WHERE c.reference = d.reference;
+--
+--DELETE FROM Document WHERE reference = 51;
+--INSERT INTO Copy (id, aisleID, reference) VALUES (51, 4, 19);
+
 
 
 -- ******* Suppression => màj quantité document ******* --

@@ -188,12 +188,12 @@ WHERE qte_emprunts_par_editeur.quantite IN
 SELECT DISTINCT d.title  --malheureusement, elle affiche aussi ceux qui ont un mot clef en commun
 FROM Document d
 WHERE d.reference NOT IN
-    ( SELECT d.reference
+( 
+    SELECT d.reference
     FROM DocumentKeywords dk, Document d
     WHERE dk.reference = d.reference 
     AND d.title = 'SQL pour les nuls'
-    )
-;
+);
 
 -- ***** (18) *****
 
@@ -201,12 +201,12 @@ SELECT DISTINCT d.title
 FROM Document d, DocumentKeywords dk
 WHERE d.reference = dk.reference
 AND dk.keyword IN
-    ( SELECT dk.keyword
+( 
+    SELECT dk.keyword
     FROM DocumentKeywords dk, Document d
     WHERE dk.reference = d.reference 
     AND d.title = 'SQL pour les nuls'
-    )
-;
+);
 
 -- ***** (19) *****
 
