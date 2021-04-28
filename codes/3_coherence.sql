@@ -110,16 +110,6 @@ END;
 --/
 
 
--- ******* Suppression d'un emprunteur => Aucun document empruntés en cours ******* --
---CREATE OR REPLACE TRIGGER tg_Borrower_VerifNoBeingBorrowedDocs
---BEFORE INSERT ON Borrower
---FOR EACH ROW
---BEGIN
---
---END;
---/
-
-
 
 ---------------------------------------------------------------------------------
 --                                  Exemplaire                                 --

@@ -213,7 +213,7 @@ INSERT INTO Borrower (id, name, fst_name, address, phone, category) VALUES (15, 
 
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (1, 1, to_date('2018-11-16', 'YYYY-MM-DD'), to_date('2018-11-19', 'YYYY-MM-DD'));
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (1, 15, to_date('2019-03-03', 'YYYY-MM-DD'), to_date('2019-03-05', 'YYYY-MM-DD'));
-INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (2, 11, to_date('2021-04-24', 'YYYY-MM-DD'), to_date('2020-04-27', 'YYYY-MM-DD'));
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (2, 11, to_date('2021-04-24', 'YYYY-MM-DD'), to_date('2021-04-27', 'YYYY-MM-DD'));
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 12, to_date('2021-01-01', 'YYYY-MM-DD'), to_date('2020-01-03', 'YYYY-MM-DD'));
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (5, 13, to_date('2020-12-13', 'YYYY-MM-DD'), to_date('2019-12-16', 'YYYY-MM-DD'));
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 14, to_date('2021-03-31', 'YYYY-MM-DD'), to_date('2021-04-03', 'YYYY-MM-DD'));

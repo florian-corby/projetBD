@@ -83,16 +83,14 @@ END;
 --DELETE FROM Document WHERE reference = 18;
 
 
----------------------------------------------------------------------------------
---                                  Emprunteur                                 --
----------------------------------------------------------------------------------
-
--- ******* Catégorie emprunteur change => réévaluer ses documents ******* --
-
-
--- ******* Suppression d'un emprunteur => Aucun document empruntés en cours ******* --
-
-
+-- ******* Ajout => vérif quantité Document ******* --
+--CREATE OR REPLACE TRIGGER tg_Document_IsQteZero
+--BEFORE INSERT ON Document
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 
 
 ---------------------------------------------------------------------------------
@@ -100,17 +98,114 @@ END;
 ---------------------------------------------------------------------------------
 
 -- ******* Ajout => Vérification nombre d'emprunts ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrow_VerifMaxBorrow
+--BEFORE INSERT ON Borrow
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 
 
 -- ******* Ajout =>  Aucun retard en cours ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrow_VerifOverdues
+--BEFORE INSERT ON Borrow
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 
 
--- ******* Ajout =>  Màj qte exemplaires ******* --
-
-
--- ******* Màj => Rendu Emprunt => màj quantité exemplaires ******* --
+-- ******* Ajout =>  On ne peut pas l'emprunter si en cours d'emprunt ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrow_VerifIsBeingBorrowed
+--BEFORE INSERT ON Borrow
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 
 
 -- ******* Suppression => Vérification document rendu ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrow_VerifHasBeenReturned -- Doublon avec ci-dessus?
+--BEFORE INSERT ON Borrow
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 
+
+
+
+---------------------------------------------------------------------------------
+--                                  Emprunteur                                 --
+---------------------------------------------------------------------------------
+
+-- ******* Catégorie emprunteur change => réévaluer ses documents ******* --
+--CREATE OR REPLACE TRIGGER tg_Borrower_AssessDocsToNewRights
+--BEFORE INSERT ON Borrower
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
+
+
+-- ******* Suppression d'un emprunteur => Aucun document empruntés en cours ******* --
+--SELECT bwr.id, bwr.name, b.borrowing_date, b.return_date, d.title
+--FROM Borrower bwr, Borrow b, Copy c, Document d
+--WHERE bwr.id = b.borrower and b.copy = c.id and c.reference = d.reference and b.return_date is null;
+--
+--SELECT bwr.id, COUNT(*)
+--FROM Borrower bwr, Borrow b
+--WHERE bwr.id = b.borrower and b.return_date is null
+--GROUP BY bwr.id;
+--
+-- (Ne marche pas car la table borrow avec ON DELETE CASCADE est modifiée => erreur mutabilité des tables avec le trigger)
+--CREATE OR REPLACE TRIGGER tg_Borrower_VerifNoBeingBorrowedDocs
+--BEFORE DELETE ON Borrower
+--FOR EACH ROW
+--DECLARE
+--    nbCopiesBeingBorrowed INT;
+--BEGIN
+--    SELECT COUNT(*) INTO nbCopiesBeingBorrowed
+--    FROM Borrow b
+--    WHERE :old.id = b.borrower and b.return_date is null
+--    GROUP BY :old.id;
+--    EXCEPTION WHEN no_data_found THEN nbCopiesBeingBorrowed := null;
+--    
+--    if nbcopiesbeingborrowed is not null
+--    then raise_application_error('-20001', 'This person has still a copy of a document being borrowed. All documents must be returned before deletion.');
+--    end if;
+--END;
+--/
+--
+--DELETE FROM Borrower bwr WHERE bwr.id = 15;
+
+
+
+---------------------------------------------------------------------------------
+--                                  Exemplaire                                 --
+---------------------------------------------------------------------------------
+
+-- ******* Ajout => màj quantité Document ******* --
+--CREATE OR REPLACE TRIGGER tg_Copy_IncreaseDocQte
+--BEFORE INSERT ON Copy
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
+
+
+-- ******* Suppression => màj quantité document ******* --
+--CREATE OR REPLACE TRIGGER tg_Copy_DecreaseDocQte
+--BEFORE INSERT ON Copy
+--FOR EACH ROW
+--BEGIN
+--
+--END;
+--/
 

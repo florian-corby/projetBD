@@ -141,7 +141,7 @@ CREATE TABLE Borrow (
     borrowing_date DATE,
     return_date DATE,
     CONSTRAINT PK_Borrow PRIMARY KEY (borrower, copy, borrowing_date),
-    CONSTRAINT FK_Borrow_Borrower FOREIGN KEY (borrower) REFERENCES Borrower(id),
+    CONSTRAINT FK_Borrow_Borrower FOREIGN KEY (borrower) REFERENCES Borrower(id) ON DELETE CASCADE,
     CONSTRAINT FK_Borrow_Copy FOREIGN KEY (copy) REFERENCES Copy(id)
 );
 
