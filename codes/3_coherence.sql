@@ -40,18 +40,6 @@ END;
 /
 
 
--- ******* Ajout => vérif quantité Document ******* --
-CREATE OR REPLACE TRIGGER tg_Document_IsQteZero
-BEFORE INSERT ON Document
-FOR EACH ROW
-BEGIN
-if :new.qte <= 0
-then raise_application_error('-20001', 'A document can only be added with positive quantity');
-end if;
-END;
-/
-
-
 
 ---------------------------------------------------------------------------------
 --                                    Emprunt                                  --
@@ -92,8 +80,8 @@ BEGIN
     into return_d
     from borrow
     where borrow.borrower = :new.borrower;
-    if (return_d is null and return_d > sysdate)
-    then raise_application_error('-20001','You are late');
+    if (return_d is null and return_d < sysdate)
+    then dbms_output.put_line('You are late');
     end if;
 END;
 /
@@ -108,9 +96,9 @@ BEGIN
 select copy
 into isBorrowed
 from borrow
-where :new.copy = borrow.copy;
+where :new.copy = borrow.copy and borrow.return_date = null;
 if isBorrowed is not null
-then raise_application_error('-200001','Already borrowed and not returned');
+then raise_application_error('-20001','Already borrowed and not returned');
 end if;    
 END;
 /

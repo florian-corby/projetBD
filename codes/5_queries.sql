@@ -41,12 +41,19 @@ WHERE e.name = d.editor AND e.name = 'Eyrolles'
 GROUP BY e.name;
 
 
--- ***** (6) *****
+-- ***** (6) ***** TODO
 
-SELECT e.name, SUM(d.qte) --SUM(c.qte) et non SUM(d.qte)
-FROM Document d, Editor e --, Copy c
-WHERE e.name = d.editor -- AND c.reference = d.reference
+SELECT e.name, SUM(d.qte)
+FROM Document d, Editor e
+WHERE d.editor = e.name
 GROUP BY e.name;
+
+
+
+--SELECT e.name, SUM(d.qte) --SUM(c.qte) et non SUM(d.qte)
+--FROM Document d, Editor e --, Copy c
+--WHERE e.name = d.editor -- AND c.reference = d.reference
+--GROUP BY e.name;
 
 
 -- ***** (7) *****
@@ -143,7 +150,7 @@ WHERE d.theme = 'informatique'
         WHERE d.theme = 'mathematiques' AND d.reference = da.reference
 );
 
--- ***** (16) *****
+-- ***** (16) ***** TODO
 
 SELECT d.editor, Max(Quantite)  --pas reussi à trouver le max
 FROM Document d
@@ -156,7 +163,7 @@ WHERE d.editor IN (
 GROUP BY d.editor
 ;
 
--- ***** (17) *****
+-- ***** (17) ***** TODO
 
 SELECT DISTINCT d.title  --malheureusement, elle affiche aussi ceux qui ont un mot clef en commun
 FROM Document d
