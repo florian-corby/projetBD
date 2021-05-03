@@ -98,13 +98,67 @@ END;
 ---------------------------------------------------------------------------------
 
 -- ******* Ajout => Vérification nombre d'emprunts ******* --
---CREATE OR REPLACE TRIGGER tg_Borrow_VerifMaxBorrow
---BEFORE INSERT ON Borrow
---FOR EACH ROW
---BEGIN
---
---END;
---/
+-- Affiche tous ceux qui ont emprunté quelque-chose avec leurs max d'emprunt associés à leurs catégories:
+SELECT DISTINCT bwr.id, bwr.name, bwr.fst_name, bwr.category, catB.borrowing_max
+FROM Borrow b, Borrower bwr, CatBorrower catB
+WHERE b.borrower = bwr.id and bwr.category = catB.cat_borrower
+ORDER BY bwr.id ASC;
+
+
+-- Affiche tous ceux qui ont emprunté quelque-chose avec leurs max d'emprunt associés à leurs catégories
+-- Et qui ont encore un emprunt en cours:
+SELECT bwr.id, bwr.name, bwr.fst_name, bwr.category, catB.borrowing_max
+FROM Borrow b, Borrower bwr, CatBorrower catB
+WHERE b.borrower = bwr.id and bwr.category = catB.cat_borrower and b.return_date is null
+ORDER BY bwr.id ASC;
+
+
+-- Compte le nombre de documents en cours d'emprunt de tous les emprunteurs ayant des emprunts en cours:
+SELECT bwr.id, COUNT(*)
+FROM Borrow b, Borrower bwr, CatBorrower catB
+WHERE b.borrower = bwr.id and bwr.category = catB.cat_borrower and b.return_date is null
+GROUP BY bwr.id
+ORDER BY bwr.id ASC;
+
+-- Le trigger final:
+CREATE OR REPLACE TRIGGER tg_Borrow_VerifMaxBorrow
+BEFORE INSERT ON Borrow
+FOR EACH ROW
+DECLARE
+    nbCurrentBorrows INT;
+    nbMaxBorrows INT;
+BEGIN
+
+    BEGIN
+        SELECT COUNT(*) INTO nbCurrentBorrows
+        FROM Borrow b, Borrower bwr, CatBorrower catB
+        WHERE bwr.id = :new.borrower and bwr.category = catB.cat_borrower and b.return_date is null
+        GROUP BY bwr.id;
+        EXCEPTION WHEN no_data_found THEN nbCurrentBorrows := 0;
+    END;
+    
+    SELECT catB.borrowing_max INTO nbMaxBorrows
+    FROM Borrower bwr, CatBorrower catB
+    WHERE bwr.id = :new.borrower and bwr.category = catB.cat_borrower;
+    
+    if nbCurrentBorrows >= nbMaxBorrows
+    then raise_application_error('-20001', 'You have exceeded the number of borrowed documents you can have. Please return some documents before borrowing new ones.');
+    end if;
+END;
+/ 
+
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 7, to_date('2020-05-03', 'YYYY-MM-DD'), null);
+DELETE FROM Borrow WHERE borrower = 15 and copy = 7 and borrowing_date = to_date('2020-05-03', 'YYYY-MM-DD');
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 14, to_date('2020-05-03', 'YYYY-MM-DD'), null);
+DELETE FROM Borrow WHERE borrower = 15 and copy = 14 and borrowing_date = to_date('2020-05-03', 'YYYY-MM-DD');
+
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 10, to_date('2020-05-03', 'YYYY-MM-DD'), null);
+DELETE FROM Borrow WHERE borrower = 3 and copy = 10 and borrowing_date = to_date('2020-05-03', 'YYYY-MM-DD');
 
 
 -- ******* Ajout =>  Aucun retard en cours ******* --

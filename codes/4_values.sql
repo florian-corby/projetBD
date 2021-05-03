@@ -229,6 +229,9 @@ INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (11, 3, 
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (11, 8, to_date('2019-07-07', 'YYYY-MM-DD'), to_date('2019-07-10', 'YYYY-MM-DD'));
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (11, 11, to_date('2019-07-07', 'YYYY-MM-DD'), to_date('2019-07-09', 'YYYY-MM-DD'));
 INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (11, 18, to_date('2019-07-10', 'YYYY-MM-DD'), to_date('2019-07-11', 'YYYY-MM-DD'));
-INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 18, to_date('2019-07-12', 'YYYY-MM-DD'), null);
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 18, to_date('2021-05-03', 'YYYY-MM-DD'), null);
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 17, to_date('2021-05-03', 'YYYY-MM-DD'), null);
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 16, to_date('2021-05-03', 'YYYY-MM-DD'), null);
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 15, to_date('2021-05-03', 'YYYY-MM-DD'), null);
 
 COMMIT;

@@ -52,40 +52,50 @@ END;
 --                                    Emprunt                                  --
 ---------------------------------------------------------------------------------
 
+
 -- ******* Ajout => Vérification nombre d'emprunts en cours ******* --
-CREATE OR REPLACE TRIGGER tg_Borrow_VerifMaxBorrow --TODO: ce doit être les emprunts en cours et non les emprunts totaux
+CREATE OR REPLACE TRIGGER tg_Borrow_VerifMaxBorrow
 BEFORE INSERT ON Borrow
 FOR EACH ROW
 DECLARE
-    max_borrow catborrower.borrowing_max%type;
-    borrow_nb number;
+    nbCurrentBorrows INT;
+    nbMaxBorrows INT;
 BEGIN
-    select catborrower.borrowing_max into max_borrow
-    from catborrower
-    inner join borrower on borrower.category = catborrower.cat_borrower
-    where borrower.id = :new.borrower;
+
+    BEGIN
+        SELECT COUNT(*) INTO nbCurrentBorrows
+        FROM Borrow b, Borrower bwr, CatBorrower catB
+        WHERE bwr.id = :new.borrower and bwr.category = catB.cat_borrower and b.return_date is null
+        GROUP BY bwr.id;
+        EXCEPTION WHEN no_data_found THEN nbCurrentBorrows := 0;
+    END;
     
-    SELECT count(*)
-    into borrow_nb
-    from borrow
-    where :new.borrower = borrower;
+    SELECT catB.borrowing_max INTO nbMaxBorrows
+    FROM Borrower bwr, CatBorrower catB
+    WHERE bwr.id = :new.borrower and bwr.category = catB.cat_borrower;
     
-    if borrow_nb +1 > max_borrow
-        then raise_application_error('-20001','You have too many documents being borrowed, you cannot borrow any document yet');
+    if nbCurrentBorrows >= nbMaxBorrows
+    then raise_application_error('-20001', 'You have exceeded the number of borrowed documents you can have. Please return some documents before borrowing new ones.');
     end if;
 END;
-/
+/ 
 
 
 --  ///=====\\\
 -- /// TESTS \\\
 -- \\\=======///
 
-
-
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 7, to_date('2020-05-03', 'YYYY-MM-DD'), null);
+--DELETE FROM Borrow WHERE borrower = 15 and copy = 7 and borrowing_date = to_date('2020-05-03', 'YYYY-MM-DD');
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 14, to_date('2020-05-03', 'YYYY-MM-DD'), null);
+--DELETE FROM Borrow WHERE borrower = 15 and copy = 14 and borrowing_date = to_date('2020-05-03', 'YYYY-MM-DD');
+--
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 10, to_date('2020-05-03', 'YYYY-MM-DD'), null);
+--DELETE FROM Borrow WHERE borrower = 3 and copy = 10 and borrowing_date = to_date('2020-05-03', 'YYYY-MM-DD');
 
 
 -- ******* Ajout =>  Aucun retard en cours ******* --
+
 CREATE OR REPLACE TRIGGER tg_Borrow_VerifOverdues
 BEFORE INSERT ON Borrow
 FOR EACH ROW
@@ -117,7 +127,7 @@ END;
 --  ///=====\\\
 -- /// TESTS \\\
 -- \\\=======///
-
+      
 --INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 6, to_date('2021-04-28', 'YYYY-MM-DD'), null);
 --DELETE FROM Borrow WHERE borrower = 15 and copy = 6 and borrowing_date =  to_date('2021-04-28', 'YYYY-MM-DD');
 

@@ -4,7 +4,6 @@
 
 
 -- ***** (1) *****
-
 SELECT d.title as Titre
 FROM Document d
 WHERE d.theme = 'mathematiques' or d.theme = 'informatique'
@@ -12,7 +11,6 @@ ORDER BY d.title ASC;
 
 
 -- ***** (2) *****
-
 SELECT d.title as Titre, d.theme as Theme
 FROM Borrower bwr, Borrow b, Copy c, Document d
 WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
@@ -20,7 +18,6 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 
 
 -- ***** (3) *****
-
 SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, a.name as Auteur
 FROM Borrower bwr, Borrow b, Copy c, Document d, Author a, DocumentAuthors da
 WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference AND d.reference = da.reference AND da.author_id = a.id
@@ -34,7 +31,6 @@ ORDER BY bwr.name ASC;
 
 
 -- ***** (5) *****
-
 SELECT e.name, SUM(d.qte)
 FROM Document d, Editor e
 WHERE e.name = d.editor AND e.name = 'Eyrolles'
@@ -42,7 +38,6 @@ GROUP BY e.name;
 
 
 -- ***** (6) ***** TODO
-
 SELECT e.name, SUM(d.qte)
 FROM Document d, Editor e
 WHERE d.editor = e.name
@@ -99,7 +94,6 @@ WHERE e.name NOT IN(
 
 
 -- ***** (11) *****
-
 SELECT bwr.name
 FROM Borrower bwr
 WHERE bwr.id NOT IN(
@@ -109,7 +103,6 @@ WHERE bwr.id NOT IN(
 );
 
 -- ***** (12) *****
-
 SELECT *
 FROM Document d
 WHERE d.reference NOT IN(
@@ -119,7 +112,6 @@ WHERE d.reference NOT IN(
 );
 
 -- ***** (13) *****
-
 SELECT DISTINCT bwr.name, bwr.fst_name
 FROM Borrower bwr, Borrow b, Copy c, Document d
 WHERE bwr.category = 'Professional'
@@ -129,8 +121,8 @@ WHERE bwr.category = 'Professional'
     AND c.reference = d.reference
     AND b.borrowing_date >= to_date('25/10/2020', 'DD/MM/YYYY')
 ;
--- ***** (14) *****
 
+-- ***** (14) *****
 SELECT *
 FROM Document d
 WHERE qte > (
@@ -139,7 +131,6 @@ WHERE qte > (
 );
 
 -- ***** (15) *****
-
 SELECT DISTINCT a.name
 FROM Author a, Document d, DocumentAuthors da
 WHERE d.theme = 'informatique'
@@ -151,7 +142,6 @@ WHERE d.theme = 'informatique'
 );
 
 -- ***** (16) *****
-
 --SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
 --    FROM Borrow b, Copy c, Document d
 --    WHERE d.reference = c.reference AND c.id = b.copy
@@ -184,7 +174,6 @@ WHERE qte_emprunts_par_editeur.quantite IN
 );
 
 -- ***** (17) ***** TODO
-
 SELECT DISTINCT d.title  --malheureusement, elle affiche aussi ceux qui ont un mot clef en commun
 FROM Document d
 WHERE d.reference NOT IN
@@ -196,7 +185,6 @@ WHERE d.reference NOT IN
 );
 
 -- ***** (18) *****
-
 SELECT DISTINCT d.title
 FROM Document d, DocumentKeywords dk
 WHERE d.reference = dk.reference
