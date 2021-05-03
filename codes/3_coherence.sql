@@ -139,14 +139,17 @@ BEFORE INSERT ON Borrow
 FOR EACH ROW
 Declare isBorrowed borrow.copy%type;
 BEGIN
-    select copy into isBorrowed
-    from borrow
-    where :new.copy = borrow.copy and borrow.return_date = null;
-    exception when no_data_found then isBorrowed := null;
+    BEGIN
+        select copy into isBorrowed
+        from borrow
+        where :new.copy = borrow.copy and borrow.return_date is null;
+        exception when no_data_found then isBorrowed := null;
+    END;
     
     if isBorrowed is not null
-        then raise_application_error('-20001','Already borrowed and not returned');
-    end if;    
+    then raise_application_error('-20001','Already borrowed and not returned');
+    end if;
+    
 END;
 /
 
@@ -155,8 +158,17 @@ END;
 -- /// TESTS \\\
 -- \\\=======///
 
-
-
+---- On insère un document qui n'est pas en cours d'emprunt:
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 6, to_date('2021-05-03', 'YYYY-MM-DD'), null);
+--DELETE FROM Borrow WHERE borrower = 3 and copy = 6 and borrowing_date =  to_date('2021-05-03', 'YYYY-MM-DD');
+--
+----On insère un document en cours d'emprunt par un emprunteur différent de celui qui emprunte actuellement le document:
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 18, to_date('2021-05-03', 'YYYY-MM-DD'), null);
+--DELETE FROM Borrow WHERE borrower = 3 and copy = 18 and borrowing_date =  to_date('2021-05-03', 'YYYY-MM-DD');
+--
+----On insère un document en cours d'emprunt par le même emprunteur que celui qui emprunte actuellement le document:
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 18, to_date('2021-05-04', 'YYYY-MM-DD'), null);
+--DELETE FROM Borrow WHERE borrower = 15 and copy = 18 and borrowing_date =  to_date('2021-05-04', 'YYYY-MM-DD');
 
 
 ---------------------------------------------------------------------------------

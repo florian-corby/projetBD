@@ -161,8 +161,9 @@ INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 10, 
 DELETE FROM Borrow WHERE borrower = 3 and copy = 10 and borrowing_date = to_date('2020-05-03', 'YYYY-MM-DD');
 
 
--- ******* Ajout =>  Aucun retard en cours ******* --
 
+
+-- ******* Ajout =>  Aucun retard en cours ******* --
 -- Liste toutes les personnes qui ont eu des documents en retard (je fais -1 pour en avoir plus pour l'instant):
 select bwr.id, bwr.name, bwr.category, r.cat_document, r.duration, b.borrowing_date, b.return_date, b.borrowing_date + r.duration-1 as expected_date
 from borrow b, borrower bwr, rights r, copy c, document d
@@ -248,9 +249,17 @@ END;
 -- /// TESTS \\\
 -- \\\=======///
 
---INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 6, to_date('2021-04-28', 'YYYY-MM-DD'), null);
---DELETE FROM Borrow WHERE borrower = 15 and copy = 6 and borrowing_date =  to_date('2021-04-28', 'YYYY-MM-DD');
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 6, to_date('2021-04-28', 'YYYY-MM-DD'), null);
+DELETE FROM Borrow WHERE borrower = 15 and copy = 6 and borrowing_date =  to_date('2021-04-28', 'YYYY-MM-DD');
 
+
+
+--  ///========\\\
+-- /// ARCHIVES \\\
+-- \\\=========///
+
+-- Version de Yann:
+-- ================
 
 --CREATE OR REPLACE TRIGGER tg_Borrow_VerifOverdues
 --BEFORE INSERT ON Borrow
@@ -271,13 +280,41 @@ END;
 
 
 -- ******* Ajout =>  On ne peut pas l'emprunter si en cours d'emprunt ******* --
---CREATE OR REPLACE TRIGGER tg_Borrow_VerifIsBeingBorrowed
---BEFORE INSERT ON Borrow
---FOR EACH ROW
---BEGIN
---
---END;
---/
+CREATE OR REPLACE TRIGGER tg_Borrow_VerifIsBeingBorrowed
+BEFORE INSERT ON Borrow
+FOR EACH ROW
+Declare isBorrowed borrow.copy%type;
+BEGIN
+    BEGIN
+        select copy into isBorrowed
+        from borrow
+        where :new.copy = borrow.copy and borrow.return_date is null;
+        exception when no_data_found then isBorrowed := null;
+    END;
+    
+    if isBorrowed is not null
+    then raise_application_error('-20001','Already borrowed and not returned');
+    end if;
+    
+END;
+/
+
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+-- On insère un document qui n'est pas en cours d'emprunt:
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 6, to_date('2021-05-03', 'YYYY-MM-DD'), null);
+DELETE FROM Borrow WHERE borrower = 3 and copy = 6 and borrowing_date =  to_date('2021-05-03', 'YYYY-MM-DD');
+
+--On insère un document en cours d'emprunt par un emprunteur différent de celui qui emprunte actuellement le document:
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 18, to_date('2021-05-03', 'YYYY-MM-DD'), null);
+DELETE FROM Borrow WHERE borrower = 3 and copy = 18 and borrowing_date =  to_date('2021-05-03', 'YYYY-MM-DD');
+
+--On insère un document en cours d'emprunt par le même emprunteur que celui qui emprunte actuellement le document:
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 18, to_date('2021-05-04', 'YYYY-MM-DD'), null);
+DELETE FROM Borrow WHERE borrower = 15 and copy = 18 and borrowing_date =  to_date('2021-05-04', 'YYYY-MM-DD');
 
 
 -- ******* Suppression => Vérification document rendu ******* --
@@ -288,7 +325,6 @@ END;
 --
 --END;
 --/
-
 
 
 
