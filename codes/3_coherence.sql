@@ -47,7 +47,6 @@ END;
 
 
 
-
 ---------------------------------------------------------------------------------
 --                                    Emprunt                                  --
 ---------------------------------------------------------------------------------
@@ -111,7 +110,7 @@ BEGIN
         and c.reference = d.reference
         and d.category = r.cat_document
         and bwr.category = r.cat_borrower
-        and b.borrowing_date + r.duration-1 < sysdate
+        and b.borrowing_date + r.duration < sysdate
         and b.return_date is null
         GROUP BY bwr.id;
         EXCEPTION WHEN no_data_found THEN nbDocsBeingOverdued := 0;
@@ -149,7 +148,6 @@ BEGIN
     if isBorrowed is not null
     then raise_application_error('-20001','Already borrowed and not returned');
     end if;
-    
 END;
 /
 
@@ -171,42 +169,29 @@ END;
 --DELETE FROM Borrow WHERE borrower = 15 and copy = 18 and borrowing_date =  to_date('2021-05-04', 'YYYY-MM-DD');
 
 
----------------------------------------------------------------------------------
---                                  Emprunteur                                 --
----------------------------------------------------------------------------------
 
--- ******* Catégorie emprunteur change => réévaluer ses documents ******* --
---CREATE OR REPLACE TRIGGER tg_Borrower_AssessDocsToNewRights
---BEFORE INSERT ON Borrower
---FOR EACH ROW
---BEGIN
---
---END;
---/
-
-
---  ///=====\\\
--- /// TESTS \\\
--- \\\=======///
-
-
-
-
-
----------------------------------------------------------------------------------
---                                  Exemplaire                                 --
----------------------------------------------------------------------------------
-
--- ******* Ajout => màj quantité Document ******* --
-CREATE OR REPLACE TRIGGER tg_Copy_IncreaseDocQte
-BEFORE INSERT ON Copy
+-- ******* Màj => Avertissement si retour de document en retard ******* --
+CREATE OR REPLACE TRIGGER tg_Borrow_warningIfLateReturn
+BEFORE UPDATE ON Borrow
 FOR EACH ROW
-DECLARE doc_qte INT;
-BEGIN
-    SELECT d.qte INTO doc_qte
-    FROM Document d
-    WHERE :new.reference = d.reference;
-    UPDATE Document SET qte = doc_qte+1 WHERE reference = :new.reference;
+DECLARE r_duration INT; delay INT;
+BEGIN  
+    BEGIN
+        select r.duration into r_duration
+        from borrower bwr, rights r, copy c, document d
+        where bwr.id = :new.borrower
+        and c.id = :new.copy
+        and c.reference = d.reference
+        and d.category = r.cat_document
+        and bwr.category = r.cat_borrower;
+        EXCEPTION WHEN no_data_found THEN r_duration := null;
+    END;
+    
+    if :old.return_date is null and (:new.borrowing_date + r_duration) < sysdate
+    then delay := sysdate - (:new.borrowing_date  + r_duration);
+         dbms_output.put_line('You are ' || delay || ' day(s) late on this document.'); 
+         dbms_output.put_line('Sanctions might apply next time.');
+    end if;
 END;
 /
 
@@ -214,41 +199,36 @@ END;
 -- /// TESTS \\\
 -- \\\=======///
 
---SELECT DISTINCT d.reference, d.title, d.qte
---FROM Document d, Copy c 
---WHERE c.reference = d.reference
---ORDER BY d.reference ASC;
+
+---- === TEST_1:
+---- On ajoute un emprunt qui va avoir un retard:
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (2, 5, to_date('2021-04-01', 'YYYY-MM-DD'), null);
 --
---INSERT INTO Copy (id, aisleID, reference) VALUES (51, 4, 19);
+---- Liste toutes les personnes qui ont actuellement des documents en retard:
+--select bwr.id, bwr.name, bwr.category, r.cat_document, r.duration, b.borrowing_date, b.return_date, b.borrowing_date + r.duration-1 as expected_date, sysdate as current_date
+--from borrow b, borrower bwr, rights r, copy c, document d
+--where bwr.id = b.borrower
+--      and b.borrower = bwr.id
+--      and b.copy = c.id
+--      and c.reference = d.reference
+--      and d.category = r.cat_document
+--      and bwr.category = r.cat_borrower
+--      and b.borrowing_date + r.duration-1 < sysdate
+--      and b.return_date is null;
 --
---SELECT * FROM Copy WHERE id = 51;
-
-
-
--- ******* Suppression => màj quantité document ******* --
-CREATE OR REPLACE TRIGGER tg_Copy_DecreaseDocQte
-BEFORE DELETE ON Copy
-FOR EACH ROW
-DECLARE doc_qte INT;
-BEGIN
-    SELECT d.qte INTO doc_qte
-    FROM Document d
-    WHERE :old.reference = d.reference;
-    UPDATE Document SET qte = doc_qte-1 WHERE reference = :old.reference;
-END;
-/
-
-
---  ///=====\\\
--- /// TESTS \\\
--- \\\=======///
-
---SELECT DISTINCT d.reference, d.title, d.qte
---FROM Document d, Copy c 
---WHERE c.reference = d.reference
---ORDER BY d.reference ASC;
+---- On simule un retour en retard (penser à brancher le DBMS Output en bas de la fenêtre SQL Developper, le bouton + vert):
+--UPDATE Borrow SET return_date = to_date('2021-05-04', 'YYYY-MM-DD') WHERE borrower = 2 and copy = 5 and borrowing_date = to_date('2021-04-01', 'YYYY-MM-DD');
 --
---DELETE FROM Copy WHERE id = 51;
+---- On efface le test:
+--DELETE FROM Borrow WHERE borrower = 2 and copy = 5 and borrowing_date = to_date('2021-04-01', 'YYYY-MM-DD');
 --
---SELECT * FROM Copy WHERE id = 51;
-
+--
+---- === TEST_2:
+---- On ajoute un emprunt qui n'aura pas de retard:
+--INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (2, 5, to_date('2021-05-03', 'YYYY-MM-DD'), null);
+--
+---- On simule le retour NON en retard:
+--UPDATE Borrow SET return_date = to_date('2021-05-04', 'YYYY-MM-DD') WHERE borrower = 2 and copy = 5 and borrowing_date = to_date('2021-05-03', 'YYYY-MM-DD');
+--
+---- On efface le test:
+--DELETE FROM Borrow WHERE borrower = 2 and copy = 5 and borrowing_date = to_date('2021-05-03', 'YYYY-MM-DD');

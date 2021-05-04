@@ -84,14 +84,22 @@ END;
 
 
 -- ******* Ajout => vérif quantité Document ******* --
---CREATE OR REPLACE TRIGGER tg_Document_IsQteZero
---BEFORE INSERT ON Document
---FOR EACH ROW
---BEGIN
---
---END;
---/
+-- Semble inutile! Pas besoin de l'attribut "quantité" dans Document car on peut connaître celle-ci avec le nombre de copies
+-- qui réfèrent à un document. Ça nous évite trois triggers pour assurer la cohérence de cet attribut... (1)
+CREATE OR REPLACE TRIGGER tg_Document_IsQteZero
+BEFORE INSERT ON Document
+FOR EACH ROW
+BEGIN
+    if :new.qte <> 0
+    then raise_application_error('-20001', 'Document quantity must be initialized at 0 as it is synchronized with the number of copies');
+    end if;
+END;
+/
 
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
 
 ---------------------------------------------------------------------------------
 --                                    Emprunt                                  --
@@ -317,6 +325,70 @@ INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (15, 18,
 DELETE FROM Borrow WHERE borrower = 15 and copy = 18 and borrowing_date =  to_date('2021-05-04', 'YYYY-MM-DD');
 
 
+-- ******* Màj => Avertissement si retour de document en retard ******* --
+CREATE OR REPLACE TRIGGER tg_Borrow_warningIfLateReturn
+BEFORE UPDATE ON Borrow
+FOR EACH ROW
+DECLARE r_duration INT; delay INT;
+BEGIN  
+    BEGIN
+        select r.duration into r_duration
+        from borrower bwr, rights r, copy c, document d
+        where bwr.id = :new.borrower
+        and c.id = :new.copy
+        and c.reference = d.reference
+        and d.category = r.cat_document
+        and bwr.category = r.cat_borrower;
+        EXCEPTION WHEN no_data_found THEN r_duration := null;
+    END;
+    
+    if :old.return_date is null and (:new.borrowing_date + r_duration) < sysdate
+    then delay := sysdate - (:new.borrowing_date  + r_duration);
+         dbms_output.put_line('You are ' || delay || ' day(s) late on this document.'); 
+         dbms_output.put_line('Sanctions might apply next time.');
+    end if;
+END;
+/
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+
+-- === TEST_1:
+-- On ajoute un emprunt qui va avoir un retard:
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (2, 5, to_date('2021-04-01', 'YYYY-MM-DD'), null);
+
+-- Liste toutes les personnes qui ont actuellement des documents en retard:
+select bwr.id, bwr.name, bwr.category, r.cat_document, r.duration, b.borrowing_date, b.return_date, b.borrowing_date + r.duration-1 as expected_date, sysdate as current_date
+from borrow b, borrower bwr, rights r, copy c, document d
+where bwr.id = b.borrower
+      and b.borrower = bwr.id
+      and b.copy = c.id
+      and c.reference = d.reference
+      and d.category = r.cat_document
+      and bwr.category = r.cat_borrower
+      and b.borrowing_date + r.duration-1 < sysdate
+      and b.return_date is null;
+
+-- On simule un retour en retard (penser à brancher le DBMS Output en bas de la fenêtre SQL Developper, le bouton + vert):
+UPDATE Borrow SET return_date = to_date('2021-05-04', 'YYYY-MM-DD') WHERE borrower = 2 and copy = 5 and borrowing_date = to_date('2021-04-01', 'YYYY-MM-DD');
+
+-- On efface le test:
+DELETE FROM Borrow WHERE borrower = 2 and copy = 5 and borrowing_date = to_date('2021-04-01', 'YYYY-MM-DD');
+
+
+-- === TEST_2:
+-- On ajoute un emprunt qui n'aura pas de retard:
+INSERT INTO Borrow (borrower, copy, borrowing_date, return_date) VALUES (2, 5, to_date('2021-05-03', 'YYYY-MM-DD'), null);
+
+-- On simule le retour NON en retard:
+UPDATE Borrow SET return_date = to_date('2021-05-04', 'YYYY-MM-DD') WHERE borrower = 2 and copy = 5 and borrowing_date = to_date('2021-05-03', 'YYYY-MM-DD');
+
+-- On efface le test:
+DELETE FROM Borrow WHERE borrower = 2 and copy = 5 and borrowing_date = to_date('2021-05-03', 'YYYY-MM-DD');
+
+
 -- ******* Suppression => Vérification document rendu ******* --
 --CREATE OR REPLACE TRIGGER tg_Borrow_VerifHasBeenReturned -- Doublon avec ci-dessus?
 --BEFORE INSERT ON Borrow
@@ -380,21 +452,61 @@ DELETE FROM Borrow WHERE borrower = 15 and copy = 18 and borrowing_date =  to_da
 ---------------------------------------------------------------------------------
 
 -- ******* Ajout => màj quantité Document ******* --
---CREATE OR REPLACE TRIGGER tg_Copy_IncreaseDocQte
---BEFORE INSERT ON Copy
---FOR EACH ROW
---BEGIN
+-- Semble inutile! Pas besoin de l'attribut "quantité" dans Document car on peut connaître celle-ci avec le nombre de copies
+-- qui réfèrent à un document. Ça nous évite trois triggers pour assurer la cohérence de cet attribut... (1)
+CREATE OR REPLACE TRIGGER tg_Copy_IncreaseDocQte
+BEFORE INSERT ON Copy
+FOR EACH ROW
+DECLARE doc_qte INT;
+BEGIN
+    SELECT d.qte INTO doc_qte
+    FROM Document d
+    WHERE :new.reference = d.reference;
+    UPDATE Document SET qte = doc_qte+1 WHERE reference = :new.reference;
+END;
+/
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+--SELECT DISTINCT d.reference, d.title, d.qte
+--FROM Document d, Copy c 
+--WHERE c.reference = d.reference
+--ORDER BY d.reference ASC;
 --
---END;
---/
+--INSERT INTO Copy (id, aisleID, reference) VALUES (51, 4, 19);
+--
+--SELECT * FROM Copy WHERE id = 51;
+
 
 
 -- ******* Suppression => màj quantité document ******* --
---CREATE OR REPLACE TRIGGER tg_Copy_DecreaseDocQte
---BEFORE INSERT ON Copy
---FOR EACH ROW
---BEGIN
+-- Semble inutile! Pas besoin de l'attribut "quantité" dans Document car on peut connaître celle-ci avec le nombre de copies
+-- qui réfèrent à un document. Ça nous évite trois triggers pour assurer la cohérence de cet attribut... (1)
+CREATE OR REPLACE TRIGGER tg_Copy_DecreaseDocQte
+BEFORE DELETE ON Copy
+FOR EACH ROW
+DECLARE doc_qte INT;
+BEGIN
+    SELECT d.qte INTO doc_qte
+    FROM Document d
+    WHERE :old.reference = d.reference;
+    UPDATE Document SET qte = doc_qte-1 WHERE reference = :old.reference;
+END;
+/
+
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+--SELECT DISTINCT d.reference, d.title, d.qte
+--FROM Document d, Copy c 
+--WHERE c.reference = d.reference
+--ORDER BY d.reference ASC;
 --
---END;
---/
+--DELETE FROM Copy WHERE id = 51;
+--
+--SELECT * FROM Copy WHERE id = 51;
 
