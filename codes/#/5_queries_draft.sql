@@ -20,6 +20,21 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 
 
 -- ***** (3) *****
+SELECT d.reference, d.title, d.editor, d.theme, d.category, a.name || ' ' || a.fst_name AS author
+FROM Document d, DocumentAuthors da, Author a
+WHERE d.reference = da.reference and da.author_id = a.id;
+
+SELECT d.reference, LISTAGG(a.name || ' ' || a.fst_name, ', ') WITHIN GROUP (ORDER BY a.name) AS authors
+FROM Document d, DocumentAuthors da, Author a
+WHERE d.reference = da.reference and da.author_id = a.id
+GROUP BY d.reference;
+
+SELECT d.reference, d.title, d.editor, d.theme, d.category, da.authors
+FROM Document d, (SELECT d.reference, LISTAGG(a.name || ' ' || a.fst_name, ', ') WITHIN GROUP (ORDER BY a.name) AS authors
+                    FROM Document d, DocumentAuthors da, Author a
+                    WHERE d.reference = da.reference and da.author_id = a.id
+                    GROUP BY d.reference) da
+WHERE d.reference = da.reference;
 
 SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, a.name as Auteur
 FROM Borrower bwr, Borrow b, Copy c, Document d, Author a

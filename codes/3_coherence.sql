@@ -94,7 +94,6 @@ END;
 
 
 -- ******* Ajout =>  Aucun retard en cours ******* --
-
 CREATE OR REPLACE TRIGGER tg_Borrow_VerifOverdues
 BEFORE INSERT ON Borrow
 FOR EACH ROW
