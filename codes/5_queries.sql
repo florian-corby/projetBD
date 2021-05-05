@@ -5,53 +5,6 @@
 
 
 ---------------------------------------------------------------------------------
---                  Vues pour simplifier certaines requêtes                    --
----------------------------------------------------------------------------------
-
--- Montre les champs les plus importants et donne la liste
--- des auteurs séparés par des virgules pour chaque document:
-CREATE OR REPLACE VIEW DocumentSummary AS
-SELECT d.reference, d.title, d.editor, d.theme, d.category, da.authors
-FROM Document d, (SELECT d.reference, LISTAGG(a.name || ' ' || a.fst_name, ', ') WITHIN GROUP (ORDER BY a.name) AS authors
-                    FROM Document d, DocumentAuthors da, Author a
-                    WHERE d.reference = da.reference and da.author_id = a.id
-                    GROUP BY d.reference) da
-WHERE d.reference = da.reference;
-
-
--- Donne pour chaque document le nombre total d'exemplaires
--- dont dispose la bibliothèque:
-CREATE OR REPLACE VIEW DocsTotalQuantities AS
-SELECT d.reference, COUNT(*) as total_copies
-FROM Document d, Copy c
-WHERE d.reference = c.reference
-GROUP BY d.reference
-ORDER BY d.reference ASC;
-
-
--- Donne pour chaque document le nombre d'exemplaires actuellement 
--- présents à la bibliothèque (ie. qui ne sont pas en cours d'emprunt):
-CREATE OR REPLACE VIEW DocsCurrentQuantities AS
-SELECT t1.reference, t1.total_copies - NVL(t2.nb_of_copies_being_borrowed, 0) as total_copies_present
-FROM 
-
-(SELECT d.reference, COUNT(*) as total_copies
-FROM Document d, Copy c
-WHERE d.reference = c.reference
-GROUP BY d.reference) t1 
-
-FULL OUTER JOIN
-
-(SELECT d.reference, COUNT(*) as nb_of_copies_being_borrowed
-FROM DOCUMENT d, Copy c, Borrow b
-WHERE d.reference = c.reference and c.id = b.copy and b.return_date is null
-GROUP BY d.reference) t2
-
-ON t1.reference = t2.reference
-ORDER BY t1.reference ASC;
-
-
----------------------------------------------------------------------------------
 --                                 Les requêtes                                --
 ---------------------------------------------------------------------------------
 
@@ -70,6 +23,18 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 
 
 -- ***** (3) ***** --
+-- Montre les champs les plus importants et donne la liste
+-- des auteurs séparés par des virgules pour chaque document:
+CREATE OR REPLACE VIEW DocumentSummary AS
+SELECT d.reference, d.title, d.editor, d.theme, d.category, da.authors
+FROM Document d, (SELECT d.reference, LISTAGG(a.name || ' ' || a.fst_name, ', ') WITHIN GROUP (ORDER BY a.name) AS authors
+                    FROM Document d, DocumentAuthors da, Author a
+                    WHERE d.reference = da.reference and da.author_id = a.id
+                    GROUP BY d.reference) da
+WHERE d.reference = da.reference;
+--SELECT * FROM DocumentSummary;
+
+-- La requête finale:
 SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, d.authors
 FROM Borrower bwr, Borrow b, Copy c, DocumentSummary d
 WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
@@ -86,16 +51,34 @@ WHERE e.name = d.editor AND e.name = 'Eyrolles'
 GROUP BY e.name;
 
 
--- ***** (6) ***** -- TODO
-SELECT e.name, SUM(d.qte)
-FROM Document d, Editor e
-WHERE d.editor = e.name
-GROUP BY e.name;
+-- ***** (6) ***** -- 
+-- Donne pour chaque document le nombre d'exemplaires actuellement 
+-- présents à la bibliothèque (ie. qui ne sont pas en cours d'emprunt):
+CREATE OR REPLACE VIEW DocsCurrentQuantities AS
+SELECT t1.reference, t1.total_copies - NVL(t2.nb_of_copies_being_borrowed, 0) as total_copies_present
+FROM 
 
---SELECT e.name, SUM(d.qte) --SUM(c.qte) et non SUM(d.qte)
---FROM Document d, Editor e --, Copy c
---WHERE e.name = d.editor -- AND c.reference = d.reference
---GROUP BY e.name;
+(SELECT d.reference, COUNT(*) as total_copies
+FROM Document d, Copy c
+WHERE d.reference = c.reference
+GROUP BY d.reference) t1 
+
+LEFT OUTER JOIN
+
+(SELECT d.reference, COUNT(*) as nb_of_copies_being_borrowed
+FROM DOCUMENT d, Copy c, Borrow b
+WHERE d.reference = c.reference and c.id = b.copy and b.return_date is null
+GROUP BY d.reference) t2
+
+ON t1.reference = t2.reference
+ORDER BY t1.reference ASC;
+--SELECT * FROM DocsCurrentQuantities;
+
+-- La requête finale:
+SELECT e.name, SUM(dcq.total_copies_present)
+FROM Document d, DocsCurrentQuantities dcq, Editor e
+WHERE d.reference = dcq.reference AND d.editor = e.name
+GROUP BY e.name;
 
 
 -- ***** (7) ***** --
