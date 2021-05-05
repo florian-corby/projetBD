@@ -67,6 +67,11 @@ FROM Document d, Editor e --, Copy c
 WHERE e.name = d.editor -- AND c.reference = d.reference
 GROUP BY e.name;
 
+--SELECT e.name, SUM(d.qte) --SUM(c.qte) et non SUM(d.qte)
+--FROM Document d, Editor e --, Copy c
+--WHERE e.name = d.editor -- AND c.reference = d.reference
+--GROUP BY e.name;
+
 
 -- ***** (7) *****
 SELECT d.title, t.quantite
@@ -163,6 +168,36 @@ WHERE d.theme = 'informatique'
 );
 
 -- ***** (16) *****
+--SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
+--    FROM Borrow b, Copy c, Document d
+--    WHERE d.reference = c.reference AND c.id = b.copy
+--    GROUP BY d.editor;
+--    
+--SELECT Max(d.quantite) as Max_Emprunt --affiche la quantité maximum
+--FROM (
+--    SELECT d.editor, COUNT(*) as Quantite 
+--    FROM Borrow b, Copy c, Document d
+--    WHERE d.reference = c.reference AND c.id = b.copy
+--    GROUP BY d.editor
+--) d;
+
+SELECT qte_emprunts_par_editeur.editor, qte_emprunts_par_editeur.quantite
+FROM (
+    SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
+    FROM Borrow b, Copy c, Document d
+    WHERE d.reference = c.reference AND c.id = b.copy
+    GROUP BY d.editor
+    ) qte_emprunts_par_editeur
+WHERE qte_emprunts_par_editeur.quantite IN
+(
+    SELECT Max(d.quantite)
+    FROM (
+        SELECT d.editor, COUNT(*) as Quantite 
+        FROM Borrow b, Copy c, Document d
+        WHERE d.reference = c.reference AND c.id = b.copy
+        GROUP BY d.editor
+    ) d
+);
 
 
 

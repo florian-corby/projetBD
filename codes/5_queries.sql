@@ -1,23 +1,15 @@
 -- ============================================================================== --
 -- ============== INTERROGATION DE LA BASE DE DONNÉES MULTIMEDIA ================ --
 -- ============================================================================== --
+-- Auteurs de ce script: Yann Berthelot, Amandine Fradet, Florian Legendre
 
 
--- ***** (1) *****
-SELECT d.title as Titre
-FROM Document d
-WHERE d.theme = 'mathematiques' or d.theme = 'informatique'
-ORDER BY d.title ASC;
+---------------------------------------------------------------------------------
+--                  Vues pour simplifier certaines requêtes                    --
+---------------------------------------------------------------------------------
 
-
--- ***** (2) *****
-SELECT d.title as Titre, d.theme as Theme
-FROM Borrower bwr, Borrow b, Copy c, Document d
-WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
-      AND bwr.name = 'Dupont' AND b.borrowing_date >= to_date('15/11/2018', 'DD/MM/YYYY') AND b.borrowing_date <= to_date('15/11/2019', 'DD/MM/YYYY');
-
-
--- ***** (3) *****
+-- Montre les champs les plus importants et donne la liste
+-- des auteurs séparés par des virgules pour chaque document:
 CREATE OR REPLACE VIEW DocumentSummary AS
 SELECT d.reference, d.title, d.editor, d.theme, d.category, da.authors
 FROM Document d, (SELECT d.reference, LISTAGG(a.name || ' ' || a.fst_name, ', ') WITHIN GROUP (ORDER BY a.name) AS authors
@@ -26,32 +18,50 @@ FROM Document d, (SELECT d.reference, LISTAGG(a.name || ' ' || a.fst_name, ', ')
                     GROUP BY d.reference) da
 WHERE d.reference = da.reference;
 
+
+
+
+
+---------------------------------------------------------------------------------
+--                                 Les requêtes                                --
+---------------------------------------------------------------------------------
+
+-- ***** (1) ***** --
+SELECT d.title as Titre
+FROM Document d
+WHERE d.theme = 'mathematiques' or d.theme = 'informatique'
+ORDER BY d.title ASC;
+
+
+-- ***** (2) ***** --
+SELECT d.title as Titre, d.theme as Theme
+FROM Borrower bwr, Borrow b, Copy c, Document d
+WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
+      AND bwr.name = 'Dupont' AND b.borrowing_date >= to_date('15/11/2018', 'DD/MM/YYYY') AND b.borrowing_date <= to_date('15/11/2019', 'DD/MM/YYYY');
+
+
+-- ***** (3) ***** --
 SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, d.authors
 FROM Borrower bwr, Borrow b, Copy c, DocumentSummary d
 WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 ORDER BY bwr.name ASC;
 
 
-
--- ***** (4) *****
-
+-- ***** (4) ***** --
 
 
-
--- ***** (5) *****
+-- ***** (5) ***** --
 SELECT e.name, SUM(d.qte)
 FROM Document d, Editor e
 WHERE e.name = d.editor AND e.name = 'Eyrolles'
 GROUP BY e.name;
 
 
--- ***** (6) ***** TODO
+-- ***** (6) ***** -- TODO
 SELECT e.name, SUM(d.qte)
 FROM Document d, Editor e
 WHERE d.editor = e.name
 GROUP BY e.name;
-
-
 
 --SELECT e.name, SUM(d.qte) --SUM(c.qte) et non SUM(d.qte)
 --FROM Document d, Editor e --, Copy c
@@ -59,7 +69,7 @@ GROUP BY e.name;
 --GROUP BY e.name;
 
 
--- ***** (7) *****
+-- ***** (7) ***** --
 SELECT d.title, t.quantite
 FROM Document d
 INNER JOIN
@@ -72,8 +82,7 @@ INNER JOIN
 t ON d.reference = t.reference;
 
 
-
--- ***** (8) *****
+-- ***** (8) ***** --
 SELECT e.name
 FROM Editor e, Document d
 WHERE e.name = d.editor AND (d.theme = 'informatique' or d.theme = 'mathematiques')
@@ -81,8 +90,7 @@ GROUP BY e.name
 HAVING COUNT(*) > 2;
 
 
--- ***** (9) *****
-
+-- ***** (9) ***** --
 SELECT DISTINCT bwr1.name
 FROM Borrower bwr1, Borrower bwr2
 WHERE bwr1.address = bwr2.address 
@@ -90,7 +98,7 @@ WHERE bwr1.address = bwr2.address
       AND bwr2.name = 'Dupont';
 
 
--- ***** (10) *****
+-- ***** (10) ***** --
 SELECT e.name
 FROM Editor e
 WHERE e.name NOT IN(
@@ -101,7 +109,7 @@ WHERE e.name NOT IN(
 );
 
 
--- ***** (11) *****
+-- ***** (11) ***** --
 SELECT bwr.name
 FROM Borrower bwr
 WHERE bwr.id NOT IN(
@@ -110,7 +118,8 @@ WHERE bwr.id NOT IN(
     GROUP BY b.borrower
 );
 
--- ***** (12) *****
+
+-- ***** (12) ***** --
 SELECT *
 FROM Document d
 WHERE d.reference NOT IN(
@@ -119,7 +128,8 @@ WHERE d.reference NOT IN(
     WHERE c.id = b.copy
 );
 
--- ***** (13) *****
+
+-- ***** (13) ***** -- --TODO: 6 derniers mois => par rapport à sysdate
 SELECT DISTINCT bwr.name, bwr.fst_name
 FROM Borrower bwr, Borrow b, Copy c, Document d
 WHERE bwr.category = 'Professional'
@@ -127,10 +137,10 @@ WHERE bwr.category = 'Professional'
     AND d.category = 'DVD'
     AND b.copy = c.id
     AND c.reference = d.reference
-    AND b.borrowing_date >= to_date('25/10/2020', 'DD/MM/YYYY')
-;
+    AND b.borrowing_date >= to_date('25/10/2020', 'DD/MM/YYYY');
 
--- ***** (14) *****
+
+-- ***** (14) ***** --
 SELECT *
 FROM Document d
 WHERE qte > (
@@ -138,7 +148,8 @@ WHERE qte > (
     FROM Document d
 );
 
--- ***** (15) *****
+
+-- ***** (15) ***** --
 SELECT DISTINCT a.name
 FROM Author a, Document d, DocumentAuthors da
 WHERE d.theme = 'informatique'
@@ -149,20 +160,8 @@ WHERE d.theme = 'informatique'
         WHERE d.theme = 'mathematiques' AND d.reference = da.reference
 );
 
--- ***** (16) *****
---SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
---    FROM Borrow b, Copy c, Document d
---    WHERE d.reference = c.reference AND c.id = b.copy
---    GROUP BY d.editor;
---    
---SELECT Max(d.quantite) as Max_Emprunt --affiche la quantité maximum
---FROM (
---    SELECT d.editor, COUNT(*) as Quantite 
---    FROM Borrow b, Copy c, Document d
---    WHERE d.reference = c.reference AND c.id = b.copy
---    GROUP BY d.editor
---) d;
 
+-- ***** (16) ***** --
 SELECT qte_emprunts_par_editeur.editor, qte_emprunts_par_editeur.quantite
 FROM (
     SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
@@ -181,7 +180,8 @@ WHERE qte_emprunts_par_editeur.quantite IN
     ) d
 );
 
--- ***** (17) ***** TODO
+
+-- ***** (17) ***** -- TODO
 SELECT DISTINCT d.title  --malheureusement, elle affiche aussi ceux qui ont un mot clef en commun
 FROM Document d
 WHERE d.reference NOT IN
@@ -192,7 +192,8 @@ WHERE d.reference NOT IN
     AND d.title = 'SQL pour les nuls'
 );
 
--- ***** (18) *****
+
+-- ***** (18) ***** --
 SELECT DISTINCT d.title
 FROM Document d, DocumentKeywords dk
 WHERE d.reference = dk.reference
@@ -202,12 +203,11 @@ AND dk.keyword IN
     FROM DocumentKeywords dk, Document d
     WHERE dk.reference = d.reference 
     AND d.title = 'SQL pour les nuls'
-);
-
--- ***** (19) *****
+) AND d.title <> 'SQL pour les nuls';
 
 
+-- ***** (19) ***** --
 
--- ***** (20) *****
 
+-- ***** (20) ***** --
 
