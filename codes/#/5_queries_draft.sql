@@ -3,6 +3,58 @@
 -- ============================================================================== --
 
 
+---------------------------------------------------------------------------------
+--                  Vues pour simplifier certaines requêtes                    --
+---------------------------------------------------------------------------------
+
+-- Montre les champs les plus importants et donne la liste
+-- des auteurs séparés par des virgules pour chaque document:
+CREATE OR REPLACE VIEW DocumentSummary AS
+SELECT d.reference, d.title, d.editor, d.theme, d.category, da.authors
+FROM Document d, (SELECT d.reference, LISTAGG(a.name || ' ' || a.fst_name, ', ') WITHIN GROUP (ORDER BY a.name) AS authors
+                    FROM Document d, DocumentAuthors da, Author a
+                    WHERE d.reference = da.reference and da.author_id = a.id
+                    GROUP BY d.reference) da
+WHERE d.reference = da.reference;
+
+
+-- Donne pour chaque document le nombre total d'exemplaires
+-- dont dispose la bibliothèque:
+CREATE OR REPLACE VIEW DocsTotalQuantities AS
+SELECT d.reference, COUNT(*) as total_copies
+FROM Document d, Copy c
+WHERE d.reference = c.reference
+GROUP BY d.reference
+ORDER BY d.reference ASC;
+
+
+-- Donne pour chaque document le nombre d'exemplaires actuellement 
+-- présents à la bibliothèque (ie. qui ne sont pas en cours d'emprunt):
+CREATE OR REPLACE VIEW DocsCurrentQuantities AS
+SELECT t1.reference, t1.total_copies - NVL(t2.nb_of_copies_being_borrowed, 0) as total_copies_present
+FROM 
+
+(SELECT d.reference, COUNT(*) as total_copies
+FROM Document d, Copy c
+WHERE d.reference = c.reference
+GROUP BY d.reference) t1 
+
+FULL OUTER JOIN
+
+(SELECT d.reference, COUNT(*) as nb_of_copies_being_borrowed
+FROM DOCUMENT d, Copy c, Borrow b
+WHERE d.reference = c.reference and c.id = b.copy and b.return_date is null
+GROUP BY d.reference) t2
+
+ON t1.reference = t2.reference
+ORDER BY t1.reference ASC;
+
+
+
+---------------------------------------------------------------------------------
+--                                 Les requêtes                                --
+---------------------------------------------------------------------------------
+
 -- ***** (1) ***** --
 SELECT d.title as Titre
 FROM Document d
@@ -251,13 +303,115 @@ WHERE d.reference NOT IN (SELECT d.reference
 
 
 -- ***** (18) ***** --
+SELECT DISTINCT d.title
+FROM Document d, DocumentKeywords dk
+WHERE d.reference = dk.reference
+AND dk.keyword IN
+( 
+    SELECT dk.keyword
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls'
+) AND d.title <> 'SQL pour les nuls';
 
 
 
 -- ***** (19) ***** --
+SELECT reference
+FROM
+(
+    SELECT t1.reference as reference, t2.keyword as keyword
+    FROM (SELECT d.reference, dk.keyword
+    FROM Document d, DocumentKeywords dk
+    WHERE dk.reference = d.reference) t1
 
+    LEFT OUTER JOIN
+
+    (SELECT dk.keyword
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls') t2
+
+    ON t1.keyword = t2.keyword
+)
+                                                    
+WHERE reference NOT IN (SELECT reference FROM Document d WHERE title = 'SQL pour les nuls')
+AND keyword is not null
+
+GROUP BY reference
+HAVING COUNT(*) = (SELECT COUNT(*)
+                    FROM DocumentKeywords dk, Document d
+                    WHERE dk.reference = d.reference 
+                    AND d.title = 'SQL pour les nuls');
 
 
 -- ***** (20) ***** --
-
+--SELECT t1.reference
+--FROM (SELECT d.reference, dk.keyword
+--FROM Document d, DocumentKeywords dk
+--WHERE dk.reference = d.reference) t1
+--
+--FULL OUTER JOIN
+--
+--(SELECT dk.keyword
+--FROM DocumentKeywords dk, Document d
+--WHERE dk.reference = d.reference 
+--AND d.title = 'SQL pour les nuls') t2
+--
+--ON t1.keyword = t2.keyword
+--
+--WHERE t1.reference NOT IN (SELECT d.reference 
+--                            FROM Document d
+--                            WHERE d.reference NOT IN (SELECT DISTINCT t1.reference
+--                            FROM (SELECT d.reference, dk.keyword as keywords
+--                                    FROM DocumentKeywords dk, Document d
+--                                    WHERE dk.reference = d.reference) t1
+--                            WHERE t1.keywords IN (SELECT dk.keyword as keyword
+--                                                    FROM DocumentKeywords dk, Document d
+--                                                    WHERE dk.reference = d.reference 
+--                                                    AND d.title = 'SQL pour les nuls')))
+--                                                    
+--AND t1.reference NOT IN (SELECT reference FROM Document d WHERE title = 'SQL pour les nuls')
+--
+--GROUP BY t1.reference
+--HAVING COUNT(*) = (SELECT COUNT(*)
+--                    FROM DocumentKeywords dk, Document d
+--                    WHERE dk.reference = d.reference 
+--                    AND d.title = 'SQL pour les nuls')
+--                    
+--INTERSECT
+--
+--SELECT t1.reference
+--FROM (SELECT d.reference, dk.keyword
+--FROM Document d, DocumentKeywords dk
+--WHERE dk.reference = d.reference) t1
+--
+--FULL OUTER JOIN
+--
+--(SELECT dk.keyword
+--FROM DocumentKeywords dk, Document d
+--WHERE dk.reference = d.reference 
+--AND d.title = 'SQL pour les nuls') t2
+--
+--ON t1.keyword = t2.keyword
+--
+--WHERE t1.reference NOT IN (SELECT d.reference 
+--                            FROM Document d
+--                            WHERE d.reference NOT IN (SELECT DISTINCT t1.reference
+--                            FROM (SELECT d.reference, dk.keyword as keywords
+--                                    FROM DocumentKeywords dk, Document d
+--                                    WHERE dk.reference = d.reference) t1
+--                            WHERE t1.keywords IN (SELECT dk.keyword as keyword
+--                                                    FROM DocumentKeywords dk, Document d
+--                                                    WHERE dk.reference = d.reference 
+--                                                    AND d.title = 'SQL pour les nuls')))
+--                                                    
+--AND t1.reference NOT IN (SELECT reference FROM Document d WHERE title = 'SQL pour les nuls')
+--AND t2.keyword is not null
+--
+--GROUP BY t1.reference
+--HAVING COUNT(*) = (SELECT COUNT(*)
+--                    FROM DocumentKeywords dk, Document d
+--                    WHERE dk.reference = d.reference 
+--                    AND d.title = 'SQL pour les nuls');
 

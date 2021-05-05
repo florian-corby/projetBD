@@ -207,30 +207,6 @@ WHERE qte_emprunts_par_editeur.quantite IN
 
 
 -- ***** (17) ***** -- 
----- Donne tous les mots-clefs de tous les documents:
---SELECT d.reference, dk.keyword
---FROM DocumentKeywords dk, Document d
---WHERE dk.reference = d.reference;
---
----- Donne tous les mots-clefs du document dont le titre est 'SQL pour les nuls':
---SELECT dk.keyword
---FROM DocumentKeywords dk, Document d
---WHERE dk.reference = d.reference 
---AND d.title = 'SQL pour les nuls';
---
----- Donne les références des documents ayant au moins un mot-clef en commun avec le 
----- document dont le titre est 'SQL pour les nuls':
---SELECT DISTINCT t1.reference
---FROM (SELECT d.reference, dk.keyword as keywords
---        FROM DocumentKeywords dk, Document d
---        WHERE dk.reference = d.reference) t1
---WHERE t1.keywords IN (SELECT dk.keyword as keyword
---        FROM DocumentKeywords dk, Document d
---        WHERE dk.reference = d.reference 
---        AND d.title = 'SQL pour les nuls');
-        
--- Donne les documents n'ayant aucun mot-clef en commun avec le
--- document dont le titre est 'SQL pour les nuls':
 SELECT * 
 FROM Document d
 WHERE d.reference NOT IN (SELECT DISTINCT t1.reference
@@ -257,7 +233,56 @@ AND dk.keyword IN
 
 
 -- ***** (19) ***** --
+SELECT reference
+FROM
+(
+    SELECT t1.reference as reference, t2.keyword as matching_keywords
+    FROM (SELECT d.reference, dk.keyword
+    FROM Document d, DocumentKeywords dk
+    WHERE dk.reference = d.reference) t1
+
+    LEFT OUTER JOIN
+
+    (SELECT dk.keyword
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls') t2
+
+    ON t1.keyword = t2.keyword
+)                                                 
+WHERE reference NOT IN (SELECT reference FROM Document d WHERE title = 'SQL pour les nuls')
+GROUP BY reference
+HAVING COUNT(matching_keywords) = (SELECT COUNT(keyword)
+                                    FROM DocumentKeywords dk, Document d
+                                    WHERE dk.reference = d.reference 
+                                    AND d.title = 'SQL pour les nuls');
 
 
 -- ***** (20) ***** --
+SELECT reference
+FROM
+(
+    SELECT t1.reference as reference, t1.keyword as doc_keywords, t2.keyword as matching_keywords
+    FROM (SELECT d.reference, dk.keyword
+    FROM Document d, DocumentKeywords dk
+    WHERE dk.reference = d.reference) t1
 
+    LEFT OUTER JOIN
+
+    (SELECT dk.keyword
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls') t2
+
+    ON t1.keyword = t2.keyword
+)                                                 
+WHERE reference NOT IN (SELECT reference FROM Document d WHERE title = 'SQL pour les nuls')
+GROUP BY reference
+HAVING COUNT(matching_keywords) = (SELECT COUNT(keyword)
+                                   FROM DocumentKeywords dk, Document d
+                                   WHERE dk.reference = d.reference 
+                                   AND d.title = 'SQL pour les nuls')
+AND COUNT(doc_keywords) <= (SELECT COUNT(keyword)
+                            FROM DocumentKeywords dk, Document d
+                            WHERE dk.reference = d.reference 
+                            AND d.title = 'SQL pour les nuls');

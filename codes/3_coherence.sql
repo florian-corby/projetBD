@@ -41,12 +41,6 @@ END;
 /
 
 
---  ///=====\\\
--- /// TESTS \\\
--- \\\=======///
-
-
-
 
 ---------------------------------------------------------------------------------
 --                                    Emprunt                                  --
@@ -232,3 +226,76 @@ END;
 --
 ---- On efface le test:
 --DELETE FROM Borrow WHERE borrower = 2 and copy = 5 and borrowing_date = to_date('2021-05-03', 'YYYY-MM-DD');
+
+
+-- ******* Ajout => vérif quantité Document ******* --
+CREATE OR REPLACE TRIGGER tg_Document_IsQteZero
+BEFORE INSERT ON Document
+FOR EACH ROW
+BEGIN
+    if :new.qte <> 0
+    then raise_application_error('-20001', 'Document quantity must be initialized at 0 as it is synchronized with the number of copies');
+    end if;
+END;
+/
+
+
+
+---------------------------------------------------------------------------------
+--                                  Exemplaire                                 --
+---------------------------------------------------------------------------------
+
+-- ******* Ajout => màj quantité Document ******* --
+CREATE OR REPLACE TRIGGER tg_Copy_IncreaseDocQte
+BEFORE INSERT ON Copy
+FOR EACH ROW
+DECLARE doc_qte INT;
+BEGIN
+    SELECT d.qte INTO doc_qte
+    FROM Document d
+    WHERE :new.reference = d.reference;
+    UPDATE Document SET qte = doc_qte+1 WHERE reference = :new.reference;
+END;
+/
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+--SELECT DISTINCT d.reference, d.title, d.qte
+--FROM Document d, Copy c 
+--WHERE c.reference = d.reference
+--ORDER BY d.reference ASC;
+--
+--INSERT INTO Copy (id, aisleID, reference) VALUES (51, 4, 19);
+--
+--SELECT * FROM Copy WHERE id = 51;
+
+
+
+-- ******* Suppression => màj quantité document ******* --
+CREATE OR REPLACE TRIGGER tg_Copy_DecreaseDocQte
+BEFORE DELETE ON Copy
+FOR EACH ROW
+DECLARE doc_qte INT;
+BEGIN
+    SELECT d.qte INTO doc_qte
+    FROM Document d
+    WHERE :old.reference = d.reference;
+    UPDATE Document SET qte = doc_qte-1 WHERE reference = :old.reference;
+END;
+/
+
+
+--  ///=====\\\
+-- /// TESTS \\\
+-- \\\=======///
+
+--SELECT DISTINCT d.reference, d.title, d.qte
+--FROM Document d, Copy c 
+--WHERE c.reference = d.reference
+--ORDER BY d.reference ASC;
+--
+--DELETE FROM Copy WHERE id = 51;
+--
+--SELECT * FROM Copy WHERE id = 51;

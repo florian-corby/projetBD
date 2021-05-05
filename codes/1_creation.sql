@@ -74,7 +74,7 @@ DROP TABLE Document CASCADE CONSTRAINTS;
 CREATE TABLE Document (
     reference INT,
     title VARCHAR2(250),
-    qte INT NOT NULL,
+    qte INT DEFAULT 0,
     editor VARCHAR2(250),
     theme VARCHAR2(250),
     category VARCHAR2(250) NOT NULL,
