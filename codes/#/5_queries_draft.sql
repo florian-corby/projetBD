@@ -205,7 +205,6 @@ WHERE qte_emprunts_par_editeur.quantite IN
 
 
 -- ***** (17) ***** -- 
-
 ---- Donne tous les mots-clefs de tous les documents:
 --SELECT d.reference, dk.keyword
 --FROM DocumentKeywords dk, Document d
@@ -240,6 +239,14 @@ WHERE d.reference NOT IN (SELECT DISTINCT t1.reference
                                                     FROM DocumentKeywords dk, Document d
                                                     WHERE dk.reference = d.reference 
                                                     AND d.title = 'SQL pour les nuls'));
+                                                    
+--TODO (Version d'Amandine):
+SELECT DISTINCT d.title  --malheureusement, elle affiche aussi ceux qui ont un mot clef en commun
+FROM Document d
+WHERE d.reference NOT IN (SELECT d.reference
+                          FROM DocumentKeywords dk, Document d
+                          WHERE dk.reference = d.reference 
+                          AND d.title = 'SQL pour les nuls');
 
 
 
