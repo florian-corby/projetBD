@@ -204,7 +204,42 @@ WHERE qte_emprunts_par_editeur.quantite IN
 
 
 
--- ***** (17) ***** --
+-- ***** (17) ***** -- 
+
+---- Donne tous les mots-clefs de tous les documents:
+--SELECT d.reference, dk.keyword
+--FROM DocumentKeywords dk, Document d
+--WHERE dk.reference = d.reference;
+--
+---- Donne tous les mots-clefs du document dont le titre est 'SQL pour les nuls':
+--SELECT dk.keyword
+--FROM DocumentKeywords dk, Document d
+--WHERE dk.reference = d.reference 
+--AND d.title = 'SQL pour les nuls';
+--
+---- Donne les références des documents ayant au moins un mot-clef en commun avec le 
+---- document dont le titre est 'SQL pour les nuls':
+--SELECT DISTINCT t1.reference
+--FROM (SELECT d.reference, dk.keyword as keywords
+--        FROM DocumentKeywords dk, Document d
+--        WHERE dk.reference = d.reference) t1
+--WHERE t1.keywords IN (SELECT dk.keyword as keyword
+--        FROM DocumentKeywords dk, Document d
+--        WHERE dk.reference = d.reference 
+--        AND d.title = 'SQL pour les nuls');
+        
+-- Donne les documents n'ayant aucun mot-clef en commun avec le
+-- document dont le titre est 'SQL pour les nuls':
+SELECT * 
+FROM Document d
+WHERE d.reference NOT IN (SELECT DISTINCT t1.reference
+                            FROM (SELECT d.reference, dk.keyword as keywords
+                                    FROM DocumentKeywords dk, Document d
+                                    WHERE dk.reference = d.reference) t1
+                            WHERE t1.keywords IN (SELECT dk.keyword as keyword
+                                                    FROM DocumentKeywords dk, Document d
+                                                    WHERE dk.reference = d.reference 
+                                                    AND d.title = 'SQL pour les nuls'));
 
 
 

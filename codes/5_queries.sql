@@ -172,10 +172,8 @@ WHERE bwr.category = 'Professional'
 -- ***** (14) ***** --
 SELECT *
 FROM Document d
-WHERE qte > (
-    SELECT AVG(qte)
-    FROM Document d
-);
+WHERE qte > (SELECT AVG(qte)
+             FROM Document d);
 
 
 -- ***** (15) ***** --
@@ -183,11 +181,9 @@ SELECT DISTINCT a.name
 FROM Author a, Document d, DocumentAuthors da
 WHERE d.theme = 'informatique'
     AND a.id = da.author_id AND da.reference = d.reference
-    AND a.id IN (
-        SELECT da.author_id
-        FROM Document d, DocumentAuthors da
-        WHERE d.theme = 'mathematiques' AND d.reference = da.reference
-);
+    AND a.id IN (SELECT da.author_id
+                 FROM Document d, DocumentAuthors da
+                 WHERE d.theme = 'mathematiques' AND d.reference = da.reference);
 
 
 -- ***** (16) ***** --
@@ -211,16 +207,19 @@ WHERE qte_emprunts_par_editeur.quantite IN
 
 
 -- ***** (17) ***** -- 
+
+SELECT dk.keyword
+FROM DocumentKeywords dk, Document d
+WHERE dk.reference = d.reference 
+AND d.title = 'SQL pour les nuls';
+
 --TODO:
 SELECT DISTINCT d.title  --malheureusement, elle affiche aussi ceux qui ont un mot clef en commun
 FROM Document d
-WHERE d.reference NOT IN
-( 
-    SELECT d.reference
-    FROM DocumentKeywords dk, Document d
-    WHERE dk.reference = d.reference 
-    AND d.title = 'SQL pour les nuls'
-);
+WHERE d.reference NOT IN (SELECT d.reference
+                          FROM DocumentKeywords dk, Document d
+                          WHERE dk.reference = d.reference 
+                          AND d.title = 'SQL pour les nuls');
 
 
 -- ***** (18) ***** --
