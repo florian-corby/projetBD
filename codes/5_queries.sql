@@ -158,7 +158,7 @@ WHERE d.reference NOT IN(
 );
 
 
--- ***** (13) ***** -- --TODO: 6 derniers mois => par rapport à sysdate
+-- ***** (13) ***** -- 
 SELECT DISTINCT bwr.name, bwr.fst_name
 FROM Borrower bwr, Borrow b, Copy c, Document d
 WHERE bwr.category = 'Professional'
@@ -166,7 +166,7 @@ WHERE bwr.category = 'Professional'
     AND d.category = 'DVD'
     AND b.copy = c.id
     AND c.reference = d.reference
-    AND b.borrowing_date >= to_date('25/10/2020', 'DD/MM/YYYY');
+    AND b.borrowing_date >= add_months(sysdate, -6);
 
 
 -- ***** (14) ***** --
@@ -210,7 +210,8 @@ WHERE qte_emprunts_par_editeur.quantite IN
 );
 
 
--- ***** (17) ***** -- TODO
+-- ***** (17) ***** -- 
+--TODO:
 SELECT DISTINCT d.title  --malheureusement, elle affiche aussi ceux qui ont un mot clef en commun
 FROM Document d
 WHERE d.reference NOT IN
