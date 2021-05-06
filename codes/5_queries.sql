@@ -42,6 +42,33 @@ ORDER BY bwr.name ASC;
 
 
 -- ***** (4) ***** --
+--En utilisant la connexion "Administrateur" (changer le nom d'utilisateur si besoin):
+--Alter session set "_ORACLE_SCRIPT" = true;
+--
+--CREATE ROLE member;
+--GRANT SELECT ON <nomUtilisateur>.Document TO member;
+--GRANT SELECT ON <nomUtilisateur>.DocumentAuthors TO member;
+--GRANT SELECT ON <nomUtilisateur>.Author TO member;
+--
+--CREATE USER colleague IDENTIFIED BY colleague;
+--GRANT member TO colleague;
+--GRANT CONNECT TO colleague;
+--GRANT RESOURCE TO colleague;
+--Alter USER colleague quota unlimited on users;
+--COMMIT;
+
+
+--Dans un autre sqldeveloper, créer une nouvelle connexion avec l'utilisateur colleague (et le mdp "colleague")
+--Pour le SID => orclcdb. Pour le nom de la connexion => choisir celui qu'on veut. Dans la nouvelle connexion, exécutez
+--la requête suivante:
+SELECT DISTINCT a.name, a.fst_name
+FROM Chuxclub.Author a, Chuxclub.DocumentAuthors da, Document d
+WHERE a.id = da.author_id AND da.reference = d.reference
+      AND d.editor = 'Dunod';
+      
+--Toute requête sur d'autres tables que celles indiquées lors de la création du rôle "member" se solde par un
+--"Table or View doesn't exist", tandis que toute requête sur les tables indiquées lors de la création du rôle "member"
+--fonctionne.
 
 
 -- ***** (5) ***** --
