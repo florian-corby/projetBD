@@ -72,10 +72,10 @@ WHERE a.id = da.author_id AND da.reference = d.reference
 
 
 -- ***** (5) ***** --
-SELECT e.name, SUM(d.qte)
-FROM Document d, Editor e
-WHERE e.name = d.editor AND e.name = 'Eyrolles'
-GROUP BY e.name;
+SELECT d.editor, SUM(d.qte)
+FROM Document d
+WHERE d.editor = 'Eyrolles'
+GROUP BY d.editor;
 
 
 -- ***** (6) ***** -- 

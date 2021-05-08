@@ -73,8 +73,6 @@ ORDER BY d.title ASC;
 -- Motivations: La vue concrète ne serait pas très utile car il s'agit d'une requête très spécifique. On pourrait penser 
 --              à un index de type arbre B+ mais ce-dernier n'est pas utilisé par l'optimiseur
 
-
--- La nouvelle requête:
 --DROP INDEX idx_borrow_borrowingDate;
 --CREATE INDEX idx_borrow_borrowingDate ON Borrow(borrowing_date);
 --
@@ -83,7 +81,7 @@ ORDER BY d.title ASC;
 --WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 --      AND bwr.name = 'Dupont' AND b.borrowing_date >= to_date('15/11/2018', 'DD/MM/YYYY') AND b.borrowing_date <= to_date('15/11/2019', 'DD/MM/YYYY');
 
--- L'ancienne requête:
+-- La requête:
 SELECT d.title as Titre, d.theme as Theme
 FROM Borrower bwr, Borrow b, Copy c, Document d
 WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
@@ -91,33 +89,34 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 
 
 -- ***** (3) ***** --
--- Méthode d'optimisation choisie: Aucune
--- Motivations: Les attributs utilisés par les jointures sont des clés primaires ou dans des tuples de clés primaires, elles
---              ont donc déjà des index qui sont utilisés pour cette requête. Un index de type arbre B+ sur l'attribut 'name'
---              de la relation Borrower n'aurait pas d'utilité ici car l'attribut n'apparaît pas ici dans la table où aurait été
---              placé l'index et donc son parcours est inutile.
+-- Méthode d'optimisation choisie: Une vue concrète
+-- Motivations: Dans la requête originale (cf. requête 3 du fichier 5_queries.sql) on utilisait une vue abstraite 
+--              avec la fonction LISTAGG. Nous avons tenté ici d'optimiser cette requête en tranformant cette vue abstraite
+--              en vue concrète. Cependant, cette fonction LISTAGG ne permet pas de créer la vue concrète avec un rafraîchissement
+--              ce qui en aurait fait un cliché. Nous avons donc décidé ici de sacrifier le confort de lecture pour l'optimisation
+--              en abandonnant l'agrégation des auteurs en une chaîne de caractère.
 
--- La nouvelle requête:
-SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, d.authors
-FROM Borrower bwr, Borrow b, Copy c, DocumentSummary d
-WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
-ORDER BY bwr.name ASC;
-
--- L'ancienne requête:
--- Montre les champs les plus importants et donne la liste
--- des auteurs séparés par des virgules pour chaque document:
-CREATE OR REPLACE VIEW DocumentSummary AS
-SELECT d.reference, d.title, d.editor, d.theme, d.category, da.authors
-FROM Document d, (SELECT d.reference, LISTAGG(a.name || ' ' || a.fst_name, ', ') WITHIN GROUP (ORDER BY a.name) AS authors
-                    FROM Document d, DocumentAuthors da, Author a
-                    WHERE d.reference = da.reference and da.author_id = a.id
-                    GROUP BY d.reference) da
-WHERE d.reference = da.reference;
+-- La requête:
+DROP MATERIALIZED VIEW DocumentSummary;
+CREATE MATERIALIZED VIEW DocumentSummary
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT
+ENABLE QUERY REWRITE AS
+    SELECT d.reference, d.title, d.editor, d.theme, d.category, da.name, da.fst_name
+    FROM Document d, (SELECT d.reference, a.name, a.fst_name
+                        FROM Document d, DocumentAuthors da, Author a
+                        WHERE d.reference = da.reference and da.author_id = a.id) da
+    WHERE d.reference = da.reference;
 --SELECT * FROM DocumentSummary;
 
--- La requête finale:
-SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, d.authors
-FROM Borrower bwr, Borrow b, Copy c, DocumentSummary d
+SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, d.name, d.fst_name
+FROM Borrower bwr, Borrow b, Copy c, 
+    (SELECT d.reference, d.title, d.editor, d.theme, d.category, da.name, da.fst_name
+        FROM Document d, (SELECT d.reference, a.name, a.fst_name
+                            FROM Document d, DocumentAuthors da, Author a
+                            WHERE d.reference = da.reference and da.author_id = a.id) da
+        WHERE d.reference = da.reference) d
 WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 ORDER BY bwr.name ASC;
 
@@ -125,7 +124,7 @@ ORDER BY bwr.name ASC;
 -- ***** (4) ***** --
 -- Méthode d'optimisation choisie: Vue concrète OU index bitmap sur l'attribut 'editor' de la relation 'Document'
 -- Motivations: Si la requête est très demandée on peut faire une vue concrète de cette requête (comme pour toutes les 
---              autres requêtes d'ailleurs...) Une autre solution, peut-être plus réutilisables dans d'autres requêtes
+--              autres requêtes d'ailleurs...) Une autre solution, peut-être plus réutilisable dans d'autres requêtes
 --              à venir, est de poser un index bitmap sur les éditeurs dans la relation 'Document'. En effet, la quantité
 --              d'éditeur semble suffisamment restreint et le nombre de documents ayant les mêmes éditeurs suffisamment grand
 --              pour que cela écarte l'arbre B+ et permette l'index bitmap.
@@ -152,23 +151,15 @@ WHERE a.id = da.author_id AND da.reference = d.reference
 
 
 -- ***** (5) ***** --
--- Méthode d'optimisation choisie: Vue concrete
--- Motivations: Elle ne sera pas mettable à jour à cause des jointures.
-
-
--- La nouvelle requête:
-DROP MATERIALIZED VIEW Qte_Eyrolles;
-CREATE MATERIALIZED VIEW Qte_Eyrolles REFRESH fast ON COMMIT AS
-SELECT e.name, SUM(d.qte)
-FROM Document d, Editor e
-WHERE e.name = d.editor AND e.name = 'Eyrolles'
-GROUP BY e.name;
+-- Méthode d'optimisation choisie: Aucune
+-- Motivations: Comme indiqué précédemment si la requête était vraiment demandé on pourrait la stocker dans une vue concrète
+--              mais c'est le cas pour toutes les requêtes. 
 
 -- L'ancienne requête:
-SELECT e.name, SUM(d.qte)
-FROM Document d, Editor e
-WHERE e.name = d.editor AND e.name = 'Eyrolles'
-GROUP BY e.name;
+SELECT d.editor, SUM(d.qte)
+FROM Document d
+WHERE d.editor = 'Eyrolles'
+GROUP BY d.editor;
 
 
 -- ***** (6) ***** --
