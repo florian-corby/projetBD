@@ -466,7 +466,7 @@ AND dk.keyword IN
 
 
 -- ***** (19) ***** --
--- Méthode d'optimisation choisie: 
+-- Méthode d'optimisation choisie: Index de type Arbre B+ sur la colonne 'title' de la relation 'Document'
 -- Motivations: 
 
 
