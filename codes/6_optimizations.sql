@@ -52,18 +52,16 @@ SET TIMING ON;
 
 
 -- ***** (1) ***** --
--- Méthode d'optimisation choisie: Bitmap
--- Motivations: Il peut y avoir autant de theme que de document, ce qui pourrait
--- devenir hors norme. Et une vue ne serait pas suffisante car elle ne serait pas
--- mettable à jour. On ne sélectionne que la colonne Title de Document
+-- Méthode d'optimisation choisie: en théorie Bitmap, en pratique rien
+-- Motivations: Un index bitmap sur les thèmes des documents pourrait devenir, si la base de documents devient importante,
+--              intéressant mais pour l'instant il ralentit la requête en témoigne le plan d'exécution quand on place 
+--              l'autotrace à ON EXPLAIN. Il faut en effet forcer l'optimiseur à utiliser l'index par un 'hint' /*+ INDEX(...) */
 
-
--- La nouvelle requête:
 DROP INDEX idx_document_theme;
 CREATE BITMAP INDEX idx_document_theme ON Document(theme);
 
--- L'ancienne requête:
-SELECT d.title as Titre
+-- La requête (la requête originale n'avait pas le 'hint' /*+ INDEX(...) */ pour l'optimiseur):
+SELECT /*+ NO_INDEX(d idx_document_theme) */ d.title as Titre
 FROM Document d
 WHERE d.theme = 'mathematiques' or d.theme = 'informatique'
 ORDER BY d.title ASC;
@@ -93,12 +91,17 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 
 
 -- ***** (3) ***** --
--- Méthode d'optimisation choisie:index Bitmap
--- Motivations: 
-CREATE BITMAP INDEX Borrower_Doc_index ON Borow ( copy );
-
+-- Méthode d'optimisation choisie: Aucune
+-- Motivations: Les attributs utilisés par les jointures sont des clés primaires ou dans des tuples de clés primaires, elles
+--              ont donc déjà des index qui sont utilisés pour cette requête. Un index de type arbre B+ sur l'attribut 'name'
+--              de la relation Borrower n'aurait pas d'utilité ici car l'attribut n'apparaît pas ici dans la table où aurait été
+--              placé l'index et donc son parcours est inutile.
 
 -- La nouvelle requête:
+SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, d.authors
+FROM Borrower bwr, Borrow b, Copy c, DocumentSummary d
+WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
+ORDER BY bwr.name ASC;
 
 -- L'ancienne requête:
 -- Montre les champs les plus importants et donne la liste
@@ -120,13 +123,28 @@ ORDER BY bwr.name ASC;
 
 
 -- ***** (4) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Vue concrète OU index bitmap sur l'attribut 'editor' de la relation 'Document'
+-- Motivations: Si la requête est très demandée on peut faire une vue concrète de cette requête (comme pour toutes les 
+--              autres requêtes d'ailleurs...) Une autre solution, peut-être plus réutilisables dans d'autres requêtes
+--              à venir, est de poser un index bitmap sur les éditeurs dans la relation 'Document'. En effet, la quantité
+--              d'éditeur semble suffisamment restreint et le nombre de documents ayant les mêmes éditeurs suffisamment grand
+--              pour que cela écarte l'arbre B+ et permette l'index bitmap.
 
+--DROP MATERIALIZED VIEW mv_author_dunod;
+--CREATE MATERIALIZED VIEW mv_author_dunod 
+--TABLESPACE USERS
+--BUILD IMMEDIATE
+--REFRESH complete ON COMMIT
+--ENABLE QUERY REWRITE AS
+--    SELECT a.name, a.fst_name
+--    FROM Chuxclub.Author a, Chuxclub.DocumentAuthors da, Document d
+--    WHERE a.id = da.author_id AND da.reference = d.reference
+--          AND d.editor = 'Dunod';
 
--- La nouvelle requête:
+DROP INDEX bidx_document_editor;
+CREATE BITMAP INDEX bidx_document_editor ON Document(editor);
 
--- L'ancienne requête:
+-- La requête:
 SELECT DISTINCT a.name, a.fst_name
 FROM Chuxclub.Author a, Chuxclub.DocumentAuthors da, Document d
 WHERE a.id = da.author_id AND da.reference = d.reference
@@ -134,11 +152,17 @@ WHERE a.id = da.author_id AND da.reference = d.reference
 
 
 -- ***** (5) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Vue concrete
+-- Motivations: Elle ne sera pas mettable à jour à cause des jointures.
 
 
 -- La nouvelle requête:
+DROP MATERIALIZED VIEW Qte_Eyrolles;
+CREATE MATERIALIZED VIEW Qte_Eyrolles REFRESH fast ON COMMIT AS
+SELECT e.name, SUM(d.qte)
+FROM Document d, Editor e
+WHERE e.name = d.editor AND e.name = 'Eyrolles'
+GROUP BY e.name;
 
 -- L'ancienne requête:
 SELECT e.name, SUM(d.qte)
@@ -148,11 +172,18 @@ GROUP BY e.name;
 
 
 -- ***** (6) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Vue
+-- Motivations: Il est pertinent de connaître le nombre de document présent pour savoir 
+--              si des emprunts sont posibles. Nous avions déjà crée une vue pour la requête.
 
 
 -- La nouvelle requête:
+DROP MATERIALIZED VIEW Editor_qte_Doc;
+CREATE MATERIALIZED VIEW Editor_qte_Doc REFRESH fast ON COMMIT AS
+SELECT e.name, SUM(dcq.total_copies_present)
+FROM Document d, DocsCurrentQuantities dcq, Editor e
+WHERE d.reference = dcq.reference AND d.editor = e.name
+GROUP BY e.name;
 
 -- L'ancienne requête:
 -- Donne pour chaque document le nombre d'exemplaires actuellement 
@@ -185,11 +216,25 @@ GROUP BY e.name;
 
 
 -- ***** (7) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: index Bitmap
+-- Motivations: Il pourra y avoir beaucoup d'enregistrements mais ce qui importe
+--              dans cette requête, c'est le nombre de fois où le document a 
+--              été emprunté et non pas la date d'emprunt. La valeur de ce champ 
+--              n'a aucun impact.
 
 
 -- La nouvelle requête:
+CREATE BITMAP INDEX idx_document_theme ON Borrow( copy )
+SELECT d.title, t.quantite
+FROM Document d
+INNER JOIN
+(
+    SELECT c.reference, COUNT(*) as Quantite
+    FROM Borrow b, Copy c, Document d
+    WHERE d.reference = c.reference AND c.id = b.copy
+    GROUP BY c.reference
+)
+t ON d.reference = t.reference;
 
 -- L'ancienne requête:
 SELECT d.title, t.quantite
@@ -484,20 +529,31 @@ AND dk.keyword IN
 
 
 -- ***** (19) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Index de type Arbre B+ sur la colonne 'title' de la relation 'Document'
+--                                 ET on crée une vue matérialisée sur les mots clefs du document 'SQL pour les nuls'
+-- Motivations: L'optimiseur se ressert ici de l'index sur la colonne 'title' de la relation 'Document' donc cela fait
+--              une première optimisation. Ensuite, on suppose que le document 'SQL pour les nuls' fait l'objet de nombreuses
+--              requêtes notamment sur ses mots ce qui semble être les cas avec les requêtes précédentes et suivantes. De plus,
+--              le COUNT(*) n'empêche pas l'optimiseur de se servir de cette vue matérialisée. La vue concrète n'est pas mettable
+--              à jour du fait de la jointure mais elle est automaintenable à l'insertion, la suppression et la mise à jour.
 
+DROP MATERIALIZED VIEW mv_sqlpourlesnuls_keywords;
+CREATE MATERIALIZED VIEW mv_sqlpourlesnuls_keywords
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT
+ENABLE QUERY REWRITE AS
+    SELECT dk.keyword
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls';
 
--- La nouvelle requête:
-
--- L'ancienne requête:
+-- La requête:
 SELECT reference
 FROM
 (
     SELECT t1.reference as reference, t2.keyword as matching_keywords
-    FROM (SELECT d.reference, dk.keyword
-    FROM Document d, DocumentKeywords dk
-    WHERE dk.reference = d.reference) t1
+    FROM DocumentKeywords t1
 
     LEFT OUTER JOIN
 
@@ -517,12 +573,36 @@ HAVING COUNT(matching_keywords) = (SELECT COUNT(keyword)
 
 
 -- ***** (20) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Index de type Arbre B+ sur la colonne 'title' de la relation 'Document'
+--                                 ET on crée une vue matérialisée sur les mots clefs du document 'SQL pour les nuls'
+-- Motivations: Simple réutilisation de l'optimiseur des outils d'optimisation mis en place ci-dessus. Du fait de la proximité
+--              des deux requêtes (la 19 et celle-ci), aucun index ou vue concrète ou algorithme de jointure n'ont été nécessaire
+--              d'ajouter.
 
+-- La requête:
+SELECT reference
+FROM
+(
+    SELECT t1.reference as reference, t1.keyword as doc_keywords, t2.keyword as matching_keywords
+    FROM DocumentKeywords t1
 
--- La nouvelle requête:
+    LEFT OUTER JOIN
 
--- L'ancienne requête:
+    (SELECT dk.keyword
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls') t2
 
+    ON t1.keyword = t2.keyword
+)                                                 
+WHERE reference NOT IN (SELECT reference FROM Document d WHERE title = 'SQL pour les nuls')
+GROUP BY reference
+HAVING COUNT(matching_keywords) = (SELECT COUNT(keyword)
+                                   FROM DocumentKeywords dk, Document d
+                                   WHERE dk.reference = d.reference 
+                                   AND d.title = 'SQL pour les nuls')
+AND COUNT(doc_keywords) <= (SELECT COUNT(keyword)
+                            FROM DocumentKeywords dk, Document d
+                            WHERE dk.reference = d.reference 
+                            AND d.title = 'SQL pour les nuls');
 
