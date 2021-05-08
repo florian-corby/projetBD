@@ -257,7 +257,7 @@ TABLESPACE USERS
 BUILD IMMEDIATE
 REFRESH complete ON COMMIT
 ENABLE QUERY REWRITE AS
-SELECT e.name 
+    SELECT e.name 
     FROM Editor e, Document d
     WHERE e.name = d.editor AND d.theme = 'informatique'
     GROUP BY e.name;
@@ -267,7 +267,7 @@ SELECT e.name
 FROM Editor e
 WHERE e.name NOT IN (SELECT * FROM editorCS);
 
--- L'ancienne requête:
+-- L'ancienne requête (l'optimiseur choisit aussi la vue matérialisée ici):
 SELECT e.name
 FROM Editor e
 WHERE e.name NOT IN(
@@ -362,16 +362,26 @@ WHERE d.theme = 'informatique'
 
 
 -- ***** (16) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Une vue matérialisée sur la table résultat "quantité d'emprunt par éditeur"
+-- Motivations: La table résultat "quantité d'emprunt par éditeur" est une table utile qui peut être amenée à être
+--              réutilisée dans d'autres requêtes. Elle n'est pas mettable à jour du fait de la jointure mais elle est
+--              automaintenable à l'insertion, la mise à jour et la suppression.
 
+DROP MATERIALIZED VIEW mv_qte_emprunts_par_editeur;
+CREATE MATERIALIZED VIEW mv_qte_emprunts_par_editeur
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT
+ENABLE QUERY REWRITE AS
+    SELECT d.editor, COUNT(*) as Quantite 
+    FROM Borrow b, Copy c, Document d
+    WHERE d.reference = c.reference AND c.id = b.copy
+    GROUP BY d.editor;
 
--- La nouvelle requête:
-
--- L'ancienne requête:
+-- La requête:
 SELECT qte_emprunts_par_editeur.editor, qte_emprunts_par_editeur.quantite
 FROM (
-    SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
+    SELECT d.editor, COUNT(*) as Quantite
     FROM Borrow b, Copy c, Document d
     WHERE d.reference = c.reference AND c.id = b.copy
     GROUP BY d.editor

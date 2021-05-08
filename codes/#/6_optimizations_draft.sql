@@ -355,16 +355,40 @@ WHERE d.theme = 'informatique'
 
 
 -- ***** (16) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Une vue matérialisée sur la table résultat "quantité d'emprunt par éditeur"
+-- Motivations: La table résultat "quantité d'emprunt par éditeur" est une table utile qui peut être amenée à être
+--              réutilisée dans d'autres requêtes. Elle n'est pas mettable à jour du fait de la jointure mais elle est
+--              automaintenable à l'insertion, la mise à jour et la suppression.
 
+DROP MATERIALIZED VIEW mv_qte_emprunts_par_editeur;
+call dbms_mview.refresh('mv_emp_by_region','c');
+DROP MATERIALIZED VIEW LOG ON Borrow;
+CREATE MATERIALIZED VIEW LOG ON Borrow;
+CREATE MATERIALIZED VIEW LOG ON Copy;
+CREATE MATERIALIZED VIEW LOG ON Document;
+CREATE MATERIALIZED VIEW mv_qte_emprunts_par_editeur
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT
+ENABLE QUERY REWRITE AS
+    SELECT d.editor, COUNT(*) as Quantite 
+    FROM Borrow b, Copy c, Document d
+    WHERE d.reference = c.reference AND c.id = b.copy
+    GROUP BY d.editor;
 
 -- La nouvelle requête:
+SELECT qte_emprunts_par_editeur.editor, qte_emprunts_par_editeur.quantite
+FROM mv_qte_emprunts_par_editeur qte_emprunts_par_editeur
+WHERE qte_emprunts_par_editeur.quantite IN
+(
+    SELECT Max(d.quantite)
+    FROM mv_qte_emprunts_par_editeur d
+);
 
--- L'ancienne requête:
+-- L'ancienne requête (l'optimiseur choisit aussi la vue matérialisée ici):
 SELECT qte_emprunts_par_editeur.editor, qte_emprunts_par_editeur.quantite
 FROM (
-    SELECT d.editor, COUNT(*) as Quantite  --affiche la quantité totale pour chaque editeur
+    SELECT d.editor, COUNT(*) as Quantite
     FROM Borrow b, Copy c, Document d
     WHERE d.reference = c.reference AND c.id = b.copy
     GROUP BY d.editor
