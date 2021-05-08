@@ -259,13 +259,13 @@ WHERE e.name NOT IN(
 
 
 -- ***** (11) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Aucune
+-- Motivations: Il n'y a pas de jointure donc pas d'optimisation à faire là-dessus que ce soit en forçant l'utilisation
+--              d'un algorithme ou en utilisant une vue concrète. Un index sur la colonne borrower de la table borrow 
+--              n'aurait ici pas d'intérêt car l'optimiseur commence de toute façon par parcourir toute la table avant 
+--              de faire son GROUP BY par hachage.
 
-
--- La nouvelle requête:
-
--- L'ancienne requête:
+-- L'ancienne requête (conservée telle quelle):
 SELECT bwr.name
 FROM Borrower bwr
 WHERE bwr.id NOT IN(
@@ -273,6 +273,7 @@ WHERE bwr.id NOT IN(
     FROM Borrow b
     GROUP BY b.borrower
 );
+
 
 -- ***** (12) ***** --
 -- Méthode d'optimisation choisie: 
