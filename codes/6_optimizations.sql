@@ -52,14 +52,15 @@ SET TIMING ON;
 
 
 -- ***** (1) ***** --
--- Méthode d'optimisation choisie: Arbre B+
+-- Méthode d'optimisation choisie: Bitmap
 -- Motivations: Il peut y avoir autant de theme que de document, ce qui pourrait
 -- devenir hors norme. Et une vue ne serait pas suffisante car elle ne serait pas
 -- mettable à jour. On ne sélectionne que la colonne Title de Document
 
 
 -- La nouvelle requête:
-CREATE INDEX Theme_index ON Document ( theme );
+DROP INDEX idx_document_theme;
+CREATE BITMAP INDEX idx_document_theme ON Document(theme);
 
 -- L'ancienne requête:
 SELECT d.title as Titre
@@ -70,11 +71,19 @@ ORDER BY d.title ASC;
 
 
 -- ***** (2) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Aucune
+-- Motivations: La vue concrète ne serait pas très utile car il s'agit d'une requête très spécifique. On pourrait penser 
+--              à un index de type arbre B+ mais ce-dernier n'est pas utilisé par l'optimiseur
 
 
 -- La nouvelle requête:
+--DROP INDEX idx_borrow_borrowingDate;
+--CREATE INDEX idx_borrow_borrowingDate ON Borrow(borrowing_date);
+--
+--SELECT /*+ INDEX(b idx_borrow_borrowingDate) */ d.title as Titre, d.theme as Theme
+--FROM Borrower bwr, Borrow b, Copy c, Document d
+--WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
+--      AND bwr.name = 'Dupont' AND b.borrowing_date >= to_date('15/11/2018', 'DD/MM/YYYY') AND b.borrowing_date <= to_date('15/11/2019', 'DD/MM/YYYY');
 
 -- L'ancienne requête:
 SELECT d.title as Titre, d.theme as Theme
@@ -196,11 +205,13 @@ t ON d.reference = t.reference;
 
 
 -- ***** (8) ***** --
--- Méthode d'optimisation choisie:Vue ou cliché
--- Motivations: Cette vue ne sera pas mettable à jour à cause de la jointure.
+-- Méthode d'optimisation choisie: Vue Concrète ou cliché
+-- Motivations: Cette vue ne sera pas mettable à jour à cause de la jointure. Elle est également automaintenable à l'insertion,
+--              la suppression et la mise à jour.
 
 -- La nouvelle requête:
-CREATE VIEW Editor_Info_Math AS
+DROP MATERIALIZED VIEW Editor_Info_Math;
+CREATE MATERIALIZED VIEW Editor_Info_Math REFRESH fast ON COMMIT AS
 SELECT e.name
 FROM Editor e, Document d
 WHERE e.name = d.editor AND (d.theme = 'informatique' or d.theme = 'mathematiques')
