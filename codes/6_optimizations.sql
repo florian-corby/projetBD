@@ -227,13 +227,14 @@ HAVING COUNT(*) > 2;
 
 
 -- ***** (9) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: aucune
+-- Motivations: Si la requête sert a lister tout les habitants de cette ville on peut lui donner 
+-- un nom approprié et s'en servir rapidement, de plus elle est automaintenable
+-- que ce soit en suppression, mise à jour ou insertion. Cependant il y a de fortes chances que l'on 
+-- fasse autrement pour obtenir le même résultat et il ne semble pas pertinent d'enregister
+-- cette reqête dans une vue.
 
-
--- La nouvelle requête:
-
--- L'ancienne requête:
+-- La requête:
 SELECT DISTINCT bwr1.name
 FROM Borrower bwr1, Borrower bwr2
 WHERE bwr1.address = bwr2.address 
@@ -297,12 +298,9 @@ WHERE bwr.id NOT IN(
 
 -- ***** (12) ***** --
 -- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Motivations: Même motivation que la requête précédente
 
-
--- La nouvelle requête:
-
--- L'ancienne requête:
+-- L'ancienne requête (conservée telle quelle):
 SELECT *
 FROM Document d
 WHERE d.reference NOT IN(
@@ -313,13 +311,25 @@ WHERE d.reference NOT IN(
 
 
 -- ***** (13) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Index Btree+
+-- Motivations : On peut calculer un index sur les dates qui permettra d'obtenir 
+-- la période qui nous intéresse bien plus rapidement si elles sont triées si la table
+-- des emprunteur est très conséquentes on pourrait égelmment créer un index sur les type d'emprunteur
 
 
 -- La nouvelle requête:
-
--- L'ancienne requête:
+drop index idx_borrow_borrowingDate
+CREATE index idx_borrow_borrowingDate on borrow(borrowing_date)
+SELECT DISTINCT bwr.name, bwr.fst_name
+FROM Borrower bwr, Borrow b, Copy c, Document d
+WHERE bwr.category = 'Professional'
+    AND bwr.id = b.borrower
+    AND d.category = 'DVD'
+    AND b.copy = c.id
+    AND c.reference = d.reference
+    AND b.borrowing_date >= add_months(sysdate, -6);
+	
+-- L'ancienne requête
 SELECT DISTINCT bwr.name, bwr.fst_name
 FROM Borrower bwr, Borrow b, Copy c, Document d
 WHERE bwr.category = 'Professional'
@@ -331,13 +341,11 @@ WHERE bwr.category = 'Professional'
 
 
 -- ***** (14) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: aucune
+-- Motivations: si la quantité d'entrée est suffisante on peut penser à un index
+-- le nombre d'exemplaires cependant le hash opéré par Oracle automatiquement est amplement suffisant
 
-
--- La nouvelle requête:
-
--- L'ancienne requête:
+-- La requête:
 SELECT *
 FROM Document d
 WHERE qte > (SELECT AVG(qte)
@@ -345,12 +353,22 @@ WHERE qte > (SELECT AVG(qte)
 
 
 -- ***** (15) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: BITMAP
+-- Motivations: On ne cherche que deux mots clé sur un domaine relativement restreint
+-- un index Bitmap sur les thèmes pourrait donc s'avérer judicieux et faciliter
+-- la recherche
 
 
 -- La nouvelle requête:
-
+drop index bdix_document_theme;
+create bitmap index bdix_document_theme on document(theme)
+SELECT DISTINCT a.name
+FROM Author a, Document d, DocumentAuthors da
+WHERE d.theme = 'informatique'
+    AND a.id = da.author_id AND da.reference = d.reference
+    AND a.id IN (SELECT da.author_id
+                 FROM Document d, DocumentAuthors da
+                 WHERE d.theme = 'mathematiques' AND d.reference = da.reference);
 -- L'ancienne requête:
 SELECT DISTINCT a.name
 FROM Author a, Document d, DocumentAuthors da
