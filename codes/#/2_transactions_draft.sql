@@ -56,6 +56,50 @@ LOCK TABLE Chuxclub.Borrow IN EXCLUSIVE MODE;
 
 INSERT INTO Chuxclub.Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 20, sysdate, null);
 --ROLLBACK;
+
+
+
+
+-- Version 2 (ne marche pas car pl/sql veut des 'into' après chaque select et que ça ne passe pas avec la sous-requête corrélée NOT IN):
+SET TRANSACTION READ WRITE NAME 'Emprunt';
+SET AUTOCOMMIT OFF;
+
+DECLARE
+ isInserted boolean;
+ 
+BEGIN
+    isInserted := false;
+    
+    WHILE not isInserted
+    LOOP
+    
+        DECLARE
+            copyToBorrow int;
+            
+        BEGIN
+            -- La base cherche le premier exemplaire disponible:
+            SELECT DISTINCT c.id into copyToBorrow
+            FROM Chuxclub.Copy c
+            WHERE c.reference = 20 AND c.id NOT IN (SELECT b.copy FROM Chuxclub.Borrow b WHERE return_date is null)
+            FETCH FIRST 1 ROWS ONLY;
+
+            -- Elle va tenter d'ajouter cet emprunt:
+            LOCK TABLE Chuxclub.Borrow IN EXCLUSIVE MODE;
+            INSERT INTO Chuxclub.Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 20, sysdate, null);
+            isInserted := true;
+        
+            EXCEPTION 
+                -- S'il n'y a aucun exemplaire de disponible on arrête tout:
+                WHEN no_data_found THEN raise_application_error('-20001', 'No copies available right now. Try again later!');
+                -- Si quelqu'un vient juste de faire le même emprunt il faut reprendre depuis le début:
+                WHEN OTHERS THEN isInserted := false;
+        END;
+        
+    END LOOP;
+END;
+
+-- Fin de la transaction:        
+COMMIT;
         
 COMMIT;
 

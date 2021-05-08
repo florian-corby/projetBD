@@ -3,23 +3,6 @@
 -- ============================================================================== --
 -- Auteurs de ce script: Yann Berthelot, Amandine Fradet, Florian Legendre
 
--- ******* Boîte à outils ******* --
--- SET TRANSACTION READ WRITE; -- La transaction peut lire (avec quel niveau d'isolation???) et écrire dans les tables.
--- SET TRANSACTION READ ONLY; -- On ne peut que lire.
-
--- Le "ISOLATION LEVEL" définit un comportement à la lecture mais n'empêche pas les insertions
--- ou updates ou suppressions. Ici, empêche les lectures sales mais pas les lectures non répétables 
--- ou les fantômes:
--- SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-
--- LOCK TABLE nom_table IN EXCLUSIVE MOVE --Verrou explicite en Ecriture
--- LOCK TABLE nom_table IN SHARE MODE --Verrou explicite en Lecture
-
--- SAVEPOINT toto; ROLLBACK TO toto;
--- ROLLBACK; COMMIT;
-
--- SHOW AUTOCOMMIT; --Affiche la valeur de la variable autocommit
--- SET AUTOCOMMIT OFF; 
 
 ---------------------------------------------------------------------------------
 --                                    Emprunt                                  --
@@ -35,24 +18,20 @@
 
 
 -- Pas nécessaire car Oracle l'ajoute implicitement à la première requête.
--- COMMIT ferme alors le bloc tout aussi implicitement:
-SET TRANSACTION READ WRITE NAME 'Emprunt';
--- On s'assure qu'il n'y a pas d'autocommit:
+-- COMMIT ferme alors le bloc tout aussi implicitement. On s'assure également que l'autocommit
+-- n'est pas à OFF même si ce n'est par défaut pas le cas sous Oracle:
+SET TRANSACTION READ WRITE;
 SET AUTOCOMMIT OFF;
 
--- Le premier arrivé peut lancer la procédure d'emprunt, les autres attendent leur tour.
--- On place le verrou en écriture avant la consultation des exemplaires disponibles afin
--- d'éviter les lectures non répétables sur ces-derniers et les verrous mortels:
-LOCK TABLE Chuxclub.Borrow IN EXCLUSIVE MODE;
-
--- L'utilisateur consulte les exemplaires disponibles du document qu'il souhaite emprunter:
+-- L'utilisateur consulte les copies disponibles du Document qu'il souhaite emprunter:
 SELECT DISTINCT c.id 
 FROM Chuxclub.Copy c
 WHERE c.reference = 20 AND c.id NOT IN (SELECT copy FROM Chuxclub.Borrow WHERE return_date is null);
 
--- L'utilisateur choisit un exemplaire et l'emprunte:
+-- Le premier arrivé peut l'emprunter. Si ça échoue l'utilisateur doit recommencer la transaction:
+LOCK TABLE Chuxclub.Borrow IN EXCLUSIVE MODE;
 INSERT INTO Chuxclub.Borrow (borrower, copy, borrowing_date, return_date) VALUES (3, 20, sysdate, null);
 
--- L'utilisateur peut alors annuler son emprunt et/ou terminer sa transaction:
---ROLLBACK;        
+-- L'utilisateur peut annuler (rollback) ou valider son emprunt:
+--ROLLBACK;
 COMMIT;
