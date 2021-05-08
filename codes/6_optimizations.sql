@@ -52,18 +52,16 @@ SET TIMING ON;
 
 
 -- ***** (1) ***** --
--- Méthode d'optimisation choisie: Bitmap
--- Motivations: Il peut y avoir autant de theme que de document, ce qui pourrait
--- devenir hors norme. Et une vue ne serait pas suffisante car elle ne serait pas
--- mettable à jour. On ne sélectionne que la colonne Title de Document
+-- Méthode d'optimisation choisie: en théorie Bitmap, en pratique rien
+-- Motivations: Un index bitmap sur les thèmes des documents pourrait devenir, si la base de documents devient importante,
+--              intéressant mais pour l'instant il ralentit la requête en témoigne le plan d'exécution quand on place 
+--              l'autotrace à ON EXPLAIN. Il faut en effet forcer l'optimiseur à utiliser l'index par un 'hint' /*+ INDEX(...) */
 
-
--- La nouvelle requête:
 DROP INDEX idx_document_theme;
 CREATE BITMAP INDEX idx_document_theme ON Document(theme);
 
--- L'ancienne requête:
-SELECT d.title as Titre
+-- La requête (la requête originale n'avait pas le 'hint' /*+ INDEX(...) */ pour l'optimiseur):
+SELECT /*+ NO_INDEX(d idx_document_theme) */ d.title as Titre
 FROM Document d
 WHERE d.theme = 'mathematiques' or d.theme = 'informatique'
 ORDER BY d.title ASC;
@@ -93,11 +91,13 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 
 
 -- ***** (3) ***** --
--- Méthode d'optimisation choisie:index Bitmap
--- Motivations: Les emprunts restent limités de par les restrictions pour chaque type d'emprunteur.
+-- Méthode d'optimisation choisie: Aucune
+-- Motivations: Les attributs utilisés par les jointures sont des clés primaires ou dans des tuples de clés primaires, elles
+--              ont donc déjà des index qui sont utilisés pour cette requête. Un index de type arbre B+ sur l'attribut 'name'
+--              de la relation Borrower n'aurait pas d'utilité ici car l'attribut n'apparaît pas ici dans la table où aurait été
+--              placé l'index et donc son parcours est inutile.
 
 -- La nouvelle requête:
-CREATE BITMAP INDEX Borrower_Doc_index ON Borow ( copy )
 SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, d.authors
 FROM Borrower bwr, Borrow b, Copy c, DocumentSummary d
 WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
@@ -123,21 +123,28 @@ ORDER BY bwr.name ASC;
 
 
 -- ***** (4) ***** --
--- Méthode d'optimisation choisie: Vue concrète
--- Motivations: Cette vue ne sera pas mettable à jour à cause des jointures. Elle est automaintenable à l'insertion,
---              la suppression et la mise à jour. 
---              La vue permettra de sélectionner les tables visibles par l'utilisateur.
+-- Méthode d'optimisation choisie: Vue concrète OU index bitmap sur l'attribut 'editor' de la relation 'Document'
+-- Motivations: Si la requête est très demandée on peut faire une vue concrète de cette requête (comme pour toutes les 
+--              autres requêtes d'ailleurs...) Une autre solution, peut-être plus réutilisables dans d'autres requêtes
+--              à venir, est de poser un index bitmap sur les éditeurs dans la relation 'Document'. En effet, la quantité
+--              d'éditeur semble suffisamment restreint et le nombre de documents ayant les mêmes éditeurs suffisamment grand
+--              pour que cela écarte l'arbre B+ et permette l'index bitmap.
 
+--DROP MATERIALIZED VIEW mv_author_dunod;
+--CREATE MATERIALIZED VIEW mv_author_dunod 
+--TABLESPACE USERS
+--BUILD IMMEDIATE
+--REFRESH complete ON COMMIT
+--ENABLE QUERY REWRITE AS
+--    SELECT a.name, a.fst_name
+--    FROM Chuxclub.Author a, Chuxclub.DocumentAuthors da, Document d
+--    WHERE a.id = da.author_id AND da.reference = d.reference
+--          AND d.editor = 'Dunod';
 
--- La nouvelle requête:
-DROP MATERIALIZED VIEW Dunod_Author;
-CREATE MATERIALIZED VIEW Dunod_Author REFRESH fast ON COMMIT AS
-SELECT DISTINCT a.name, a.fst_name
-FROM Chuxclub.Author a, Chuxclub.DocumentAuthors da, Document d
-WHERE a.id = da.author_id AND da.reference = d.reference
-      AND d.editor = 'Dunod';
+DROP INDEX bidx_document_editor;
+CREATE BITMAP INDEX bidx_document_editor ON Document(editor);
 
--- L'ancienne requête:
+-- La requête:
 SELECT DISTINCT a.name, a.fst_name
 FROM Chuxclub.Author a, Chuxclub.DocumentAuthors da, Document d
 WHERE a.id = da.author_id AND da.reference = d.reference
