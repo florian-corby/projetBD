@@ -96,7 +96,6 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 --              ce qui en aurait fait un cliché. Nous avons donc décidé ici de sacrifier le confort de lecture pour l'optimisation
 --              en abandonnant l'agrégation des auteurs en une chaîne de caractère.
 
--- La requête:
 DROP MATERIALIZED VIEW DocumentSummary;
 CREATE MATERIALIZED VIEW DocumentSummary
 TABLESPACE USERS
@@ -110,6 +109,7 @@ ENABLE QUERY REWRITE AS
     WHERE d.reference = da.reference;
 --SELECT * FROM DocumentSummary;
 
+-- La requête:
 SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, d.name, d.fst_name
 FROM Borrower bwr, Borrow b, Copy c, 
     (SELECT d.reference, d.title, d.editor, d.theme, d.category, da.name, da.fst_name
@@ -153,9 +153,10 @@ WHERE a.id = da.author_id AND da.reference = d.reference
 -- ***** (5) ***** --
 -- Méthode d'optimisation choisie: Aucune
 -- Motivations: Comme indiqué précédemment si la requête était vraiment demandé on pourrait la stocker dans une vue concrète
---              mais c'est le cas pour toutes les requêtes. 
+--              mais c'est le cas pour toutes les requêtes. Le seul index qu'on pourrait poser mais qui a déjà été posé précédemment
+--              est un index bitmap sur l'attribut 'editor' de la relation 'Document'. Ici il n'est pas utilisé par l'optimiseur.
 
--- L'ancienne requête:
+-- La requête:
 SELECT d.editor, SUM(d.qte)
 FROM Document d
 WHERE d.editor = 'Eyrolles'
@@ -163,98 +164,67 @@ GROUP BY d.editor;
 
 
 -- ***** (6) ***** --
--- Méthode d'optimisation choisie: Vue
--- Motivations: Il est pertinent de connaître le nombre de document présent pour savoir 
---              si des emprunts sont posibles. Nous avions déjà crée une vue pour la requête.
+-- Méthode d'optimisation choisie: index bitmap sur l'attribut 'editor' de la relation 'Document'
+-- Motivations: Réutilisation par l'optimiseur de l'index bitmap définit lors de l'optimisation de la requête 4.
+--              Nous avons tenté de transformer la vue abstraite DocumentSummary utilisée dans le fichier 5_queries.sql
+--              à la même requête mais c'était impossible car la fonction NVL n'est pas autorisé pour le rafraîchissement
+--              de la vue concrète. 
 
-
--- La nouvelle requête:
-DROP MATERIALIZED VIEW Editor_qte_Doc;
-CREATE MATERIALIZED VIEW Editor_qte_Doc REFRESH fast ON COMMIT AS
+-- La requête:
 SELECT e.name, SUM(dcq.total_copies_present)
-FROM Document d, DocsCurrentQuantities dcq, Editor e
-WHERE d.reference = dcq.reference AND d.editor = e.name
-GROUP BY e.name;
+FROM Document d, 
+     (SELECT t1.reference, t1.total_copies - NVL(t2.nb_of_copies_being_borrowed, 0) as total_copies_present
+      FROM 
 
--- L'ancienne requête:
--- Donne pour chaque document le nombre d'exemplaires actuellement 
--- présents à la bibliothèque (ie. qui ne sont pas en cours d'emprunt):
-CREATE OR REPLACE VIEW DocsCurrentQuantities AS
-SELECT t1.reference, t1.total_copies - NVL(t2.nb_of_copies_being_borrowed, 0) as total_copies_present
-FROM 
+      (SELECT c.reference, COUNT(*) as total_copies FROM Copy c GROUP BY c.reference) t1 
+       LEFT OUTER JOIN
+      (SELECT c.reference, COUNT(*) as nb_of_copies_being_borrowed
+       FROM Copy c, Borrow b
+       WHERE c.id = b.copy and b.return_date is null
+       GROUP BY c.reference) t2
 
-(SELECT d.reference, COUNT(*) as total_copies
-FROM Document d, Copy c
-WHERE d.reference = c.reference
-GROUP BY d.reference) t1 
-
-LEFT OUTER JOIN
-
-(SELECT d.reference, COUNT(*) as nb_of_copies_being_borrowed
-FROM DOCUMENT d, Copy c, Borrow b
-WHERE d.reference = c.reference and c.id = b.copy and b.return_date is null
-GROUP BY d.reference) t2
-
-ON t1.reference = t2.reference
-ORDER BY t1.reference ASC;
---SELECT * FROM DocsCurrentQuantities;
-
--- La requête finale:
-SELECT e.name, SUM(dcq.total_copies_present)
-FROM Document d, DocsCurrentQuantities dcq, Editor e
+      ON t1.reference = t2.reference
+      ORDER BY t1.reference ASC) dcq, 
+     Editor e
 WHERE d.reference = dcq.reference AND d.editor = e.name
 GROUP BY e.name;
 
 
 -- ***** (7) ***** --
--- Méthode d'optimisation choisie: index Bitmap
--- Motivations: Il pourra y avoir beaucoup d'enregistrements mais ce qui importe
---              dans cette requête, c'est le nombre de fois où le document a 
---              été emprunté et non pas la date d'emprunt. La valeur de ce champ 
---              n'a aucun impact.
+-- Méthode d'optimisation choisie: Vue concrète.
+-- Motivations: On stocke le résultat du nombre d'emprunts d'un document dans une vue concrète car c'est une vue qui peut
+--              potentiellement être réutilisée dans d'autres requêtes et qu'elle n'est certes pas mettable à jour mais elle
+--              est automaintenable à l'insertion, la mise à jour et la suppression.
 
 
--- La nouvelle requête:
-CREATE BITMAP INDEX idx_document_theme ON Borrow( copy )
+DROP MATERIALIZED VIEW mv_qte_emprunts_docs;
+CREATE MATERIALIZED VIEW mv_qte_emprunts_docs
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT
+ENABLE QUERY REWRITE AS
+    SELECT c.reference, COUNT(*) as quantite
+    FROM Borrow b, Copy c
+    WHERE c.id = b.copy
+    GROUP BY c.reference;
+
+-- La requête:
 SELECT d.title, t.quantite
-FROM Document d
-INNER JOIN
-(
-    SELECT c.reference, COUNT(*) as Quantite
-    FROM Borrow b, Copy c, Document d
-    WHERE d.reference = c.reference AND c.id = b.copy
-    GROUP BY c.reference
-)
-t ON d.reference = t.reference;
-
--- L'ancienne requête:
-SELECT d.title, t.quantite
-FROM Document d
-INNER JOIN
-(
-    SELECT c.reference, COUNT(*) as Quantite
-    FROM Borrow b, Copy c, Document d
-    WHERE d.reference = c.reference AND c.id = b.copy
-    GROUP BY c.reference
-)
-t ON d.reference = t.reference;
+FROM Document d, 
+    (SELECT c.reference, COUNT(*) as quantite
+    FROM Borrow b, Copy c
+    WHERE c.id = b.copy
+    GROUP BY c.reference) t 
+WHERE d.reference = t.reference;
 
 
 -- ***** (8) ***** --
--- Méthode d'optimisation choisie: Vue Concrète ou cliché
--- Motivations: Cette vue ne sera pas mettable à jour à cause de la jointure. Elle est également automaintenable à l'insertion,
---              la suppression et la mise à jour.
+-- Méthode d'optimisation choisie: Index Bitmap sur Document(editor) et Index arbre B+ sur Document(theme)
+-- Motivations: Réutilisation par l'optimiseur de l'index bitmap posé sur Document(editor) lors de l'optimisation de la 
+-- requête 4 et réutilisation de l'index par arbre B+ sur Document(theme) initialement définie pour l'optimisation de la 
+-- requête 18.
 
--- La nouvelle requête:
-DROP MATERIALIZED VIEW Editor_Info_Math;
-CREATE MATERIALIZED VIEW Editor_Info_Math REFRESH fast ON COMMIT AS
-SELECT e.name
-FROM Editor e, Document d
-WHERE e.name = d.editor AND (d.theme = 'informatique' or d.theme = 'mathematiques')
-GROUP BY e.name
-HAVING COUNT(*) > 2;
-
--- L'ancienne requête:
+-- La requête:
 SELECT e.name
 FROM Editor e, Document d
 WHERE e.name = d.editor AND (d.theme = 'informatique' or d.theme = 'mathematiques')

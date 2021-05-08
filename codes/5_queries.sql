@@ -85,17 +85,14 @@ CREATE OR REPLACE VIEW DocsCurrentQuantities AS
 SELECT t1.reference, t1.total_copies - NVL(t2.nb_of_copies_being_borrowed, 0) as total_copies_present
 FROM 
 
-(SELECT d.reference, COUNT(*) as total_copies
-FROM Document d, Copy c
-WHERE d.reference = c.reference
-GROUP BY d.reference) t1 
+(SELECT c.reference, COUNT(*) as total_copies FROM Copy c GROUP BY c.reference) t1 
 
 LEFT OUTER JOIN
 
-(SELECT d.reference, COUNT(*) as nb_of_copies_being_borrowed
-FROM DOCUMENT d, Copy c, Borrow b
-WHERE d.reference = c.reference and c.id = b.copy and b.return_date is null
-GROUP BY d.reference) t2
+(SELECT c.reference, COUNT(*) as nb_of_copies_being_borrowed
+FROM Copy c, Borrow b
+WHERE c.id = b.copy and b.return_date is null
+GROUP BY c.reference) t2
 
 ON t1.reference = t2.reference
 ORDER BY t1.reference ASC;
@@ -110,15 +107,12 @@ GROUP BY e.name;
 
 -- ***** (7) ***** --
 SELECT d.title, t.quantite
-FROM Document d
-INNER JOIN
-(
-    SELECT c.reference, COUNT(*) as Quantite
-    FROM Borrow b, Copy c, Document d
-    WHERE d.reference = c.reference AND c.id = b.copy
-    GROUP BY c.reference
-)
-t ON d.reference = t.reference;
+FROM Document d, 
+    (SELECT c.reference, COUNT(*) as quantite
+    FROM Borrow b, Copy c
+    WHERE c.id = b.copy
+    GROUP BY c.reference) t 
+WHERE d.reference = t.reference;
 
 
 -- ***** (8) ***** --
