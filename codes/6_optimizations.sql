@@ -399,11 +399,33 @@ WHERE qte_emprunts_par_editeur.quantite IN
 
 
 -- ***** (17) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Aucune
+-- Motivations: L'optimiseur choisit déjà le meilleur algorithme de jointure (tri fusion ici), la vue matérialisée prend plus
+--              de temps selon l'optimiseur (laissée en commentaire ci-dessous) et aucun index ne semble utile ici (il y a déjà
+--              des index implicites sur les clefs primaires utilisées pour les jointures).
 
-
--- La nouvelle requête:
+--DROP MATERIALIZED VIEW mv_docs_keywords;
+--CREATE MATERIALIZED VIEW mv_docs_keywords
+--TABLESPACE USERS
+--BUILD IMMEDIATE
+--REFRESH complete ON COMMIT
+--ENABLE QUERY REWRITE AS
+--    SELECT d.reference, d.title, dk.keyword
+--    FROM DocumentKeywords dk, Document d
+--    WHERE dk.reference = d.reference;
+--
+---- La nouvelle requête:
+--SELECT * 
+--FROM Document d
+--WHERE d.reference NOT IN (SELECT DISTINCT t1.reference
+--                            FROM (SELECT d.reference, d.title, dk.keyword
+--                                  FROM DocumentKeywords dk, Document d
+--                                  WHERE dk.reference = d.reference) t1
+--                            WHERE t1.keyword IN (SELECT keyword 
+--                                                 FROM (SELECT d.reference, d.title, dk.keyword
+--                                                        FROM DocumentKeywords dk, Document d
+--                                                        WHERE dk.reference = d.reference) 
+--                                                 WHERE title = 'SQL pour les nuls'));
 
 -- L'ancienne requête:
 SELECT * 
