@@ -52,11 +52,14 @@ SET TIMING ON;
 
 
 -- ***** (1) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Arbre B+
+-- Motivations: Il peut y avoir autant de theme que de document, ce qui pourrait
+-- devenir hors norme. Et une vue ne serait pas suffisante car elle ne serait pas
+-- mettable à jour. On ne sélectionne que la colonne Title de Document
 
 
 -- La nouvelle requête:
+CREATE INDEX Theme_index ON Document ( theme );
 
 -- L'ancienne requête:
 SELECT d.title as Titre
@@ -81,8 +84,9 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 
 
 -- ***** (3) ***** --
--- Méthode d'optimisation choisie: 
+-- Méthode d'optimisation choisie:index Bitmap
 -- Motivations: 
+CREATE BITMAP INDEX Borrower_Doc_index ON Borow ( copy );
 
 
 -- La nouvelle requête:
@@ -192,11 +196,16 @@ t ON d.reference = t.reference;
 
 
 -- ***** (8) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
-
+-- Méthode d'optimisation choisie:Vue ou cliché
+-- Motivations: Cette vue ne sera pas mettable à jour à cause de la jointure.
 
 -- La nouvelle requête:
+CREATE VIEW Editor_Info_Math AS
+SELECT e.name
+FROM Editor e, Document d
+WHERE e.name = d.editor AND (d.theme = 'informatique' or d.theme = 'mathematiques')
+GROUP BY e.name
+HAVING COUNT(*) > 2;
 
 -- L'ancienne requête:
 SELECT e.name
