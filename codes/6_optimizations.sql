@@ -94,11 +94,14 @@ WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
 
 -- ***** (3) ***** --
 -- Méthode d'optimisation choisie:index Bitmap
--- Motivations: 
-CREATE BITMAP INDEX Borrower_Doc_index ON Borow ( copy );
-
+-- Motivations: Les emprunts restent limités de par les restrictions pour chaque type d'emprunteur.
 
 -- La nouvelle requête:
+CREATE BITMAP INDEX Borrower_Doc_index ON Borow ( copy )
+SELECT DISTINCT bwr.name as Emprunteur, d.title as Titre, d.authors
+FROM Borrower bwr, Borrow b, Copy c, DocumentSummary d
+WHERE bwr.id = b.borrower AND b.copy = c.id AND c.reference = d.reference
+ORDER BY bwr.name ASC;
 
 -- L'ancienne requête:
 -- Montre les champs les plus importants et donne la liste
@@ -120,11 +123,19 @@ ORDER BY bwr.name ASC;
 
 
 -- ***** (4) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Vue concrète
+-- Motivations: Cette vue ne sera pas mettable à jour à cause des jointures. Elle est automaintenable à l'insertion,
+--              la suppression et la mise à jour. 
+--              La vue permettra de sélectionner les tables visibles par l'utilisateur.
 
 
 -- La nouvelle requête:
+DROP MATERIALIZED VIEW Dunod_Author;
+CREATE MATERIALIZED VIEW Dunod_Author REFRESH fast ON COMMIT AS
+SELECT DISTINCT a.name, a.fst_name
+FROM Chuxclub.Author a, Chuxclub.DocumentAuthors da, Document d
+WHERE a.id = da.author_id AND da.reference = d.reference
+      AND d.editor = 'Dunod';
 
 -- L'ancienne requête:
 SELECT DISTINCT a.name, a.fst_name
@@ -134,11 +145,17 @@ WHERE a.id = da.author_id AND da.reference = d.reference
 
 
 -- ***** (5) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Vue concrete
+-- Motivations: Elle ne sera pas mettable à jour à cause des jointures.
 
 
 -- La nouvelle requête:
+DROP MATERIALIZED VIEW Qte_Eyrolles;
+CREATE MATERIALIZED VIEW Qte_Eyrolles REFRESH fast ON COMMIT AS
+SELECT e.name, SUM(d.qte)
+FROM Document d, Editor e
+WHERE e.name = d.editor AND e.name = 'Eyrolles'
+GROUP BY e.name;
 
 -- L'ancienne requête:
 SELECT e.name, SUM(d.qte)
@@ -148,11 +165,18 @@ GROUP BY e.name;
 
 
 -- ***** (6) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Vue
+-- Motivations: Il est pertinent de connaître le nombre de document présent pour savoir 
+--              si des emprunts sont posibles. Nous avions déjà crée une vue pour la requête.
 
 
 -- La nouvelle requête:
+DROP MATERIALIZED VIEW Editor_qte_Doc;
+CREATE MATERIALIZED VIEW Editor_qte_Doc REFRESH fast ON COMMIT AS
+SELECT e.name, SUM(dcq.total_copies_present)
+FROM Document d, DocsCurrentQuantities dcq, Editor e
+WHERE d.reference = dcq.reference AND d.editor = e.name
+GROUP BY e.name;
 
 -- L'ancienne requête:
 -- Donne pour chaque document le nombre d'exemplaires actuellement 
@@ -185,11 +209,25 @@ GROUP BY e.name;
 
 
 -- ***** (7) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: index Bitmap
+-- Motivations: Il pourra y avoir beaucoup d'enregistrements mais ce qui importe
+--              dans cette requête, c'est le nombre de fois où le document a 
+--              été emprunté et non pas la date d'emprunt. La valeur de ce champ 
+--              n'a aucun impact.
 
 
 -- La nouvelle requête:
+CREATE BITMAP INDEX idx_document_theme ON Borrow( copy )
+SELECT d.title, t.quantite
+FROM Document d
+INNER JOIN
+(
+    SELECT c.reference, COUNT(*) as Quantite
+    FROM Borrow b, Copy c, Document d
+    WHERE d.reference = c.reference AND c.id = b.copy
+    GROUP BY c.reference
+)
+t ON d.reference = t.reference;
 
 -- L'ancienne requête:
 SELECT d.title, t.quantite
