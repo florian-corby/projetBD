@@ -441,13 +441,18 @@ WHERE d.reference NOT IN (SELECT DISTINCT t1.reference
 
 
 -- ***** (18) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Index de type Arbre B+ sur la colonne 'title' de la relation 'Document'
+-- Motivations: Aucun index supplémentaire sur les autres attributs impliqués par la requête n'était vraiment utile
+--              car les autres attributs sont des clefs primaires ou dans des tuples de clefs ce qui implique qu'ils ont
+--              déjà des index implicites en témoigne la commande SELECT SEGMENT_NAME, BLEVEL, LEAF_BLOCKS [...] en tête
+--              de ce script. Une vue concrète n'était pas vraiment utile ici car trop spécifique pour être réutilisable 
+--              et l'algorithme de jointure était bon. L'expérimentation (avec l'autotrace) révèle que l'optimiseur utilise
+--              effectivement l'index créé ci-dessous.
 
+DROP INDEX idx_document_title;
+CREATE INDEX idx_document_title ON Document(title);
 
--- La nouvelle requête:
-
--- L'ancienne requête:
+-- La requête:
 SELECT DISTINCT d.title
 FROM Document d, DocumentKeywords dk
 WHERE d.reference = dk.reference
