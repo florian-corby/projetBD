@@ -467,19 +467,30 @@ AND dk.keyword IN
 
 -- ***** (19) ***** --
 -- Méthode d'optimisation choisie: Index de type Arbre B+ sur la colonne 'title' de la relation 'Document'
--- Motivations: 
+--                                 ET on crée une vue matérialisée sur les mots clefs du document 'SQL pour les nuls'
+-- Motivations: L'optimiseur se ressert ici de l'index sur la colonne 'title' de la relation 'Document' donc cela fait
+--              une première optimisation. Ensuite, on suppose que le document 'SQL pour les nuls' fait l'objet de nombreuses
+--              requêtes notamment sur ses mots ce qui semble être les cas avec les requêtes précédentes et suivantes. De plus,
+--              le COUNT(*) n'empêche pas l'optimiseur de se servir de cette vue matérialisée. La vue concrète n'est pas mettable
+--              à jour du fait de la jointure mais elle est automaintenable à l'insertion, la suppression et la mise à jour.
 
+DROP MATERIALIZED VIEW mv_sqlpourlesnuls_keywords;
+CREATE MATERIALIZED VIEW mv_sqlpourlesnuls_keywords
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT
+ENABLE QUERY REWRITE AS
+    SELECT dk.keyword
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls';
 
--- La nouvelle requête:
-
--- L'ancienne requête:
+-- La requête:
 SELECT reference
 FROM
 (
     SELECT t1.reference as reference, t2.keyword as matching_keywords
-    FROM (SELECT d.reference, dk.keyword
-    FROM Document d, DocumentKeywords dk
-    WHERE dk.reference = d.reference) t1
+    FROM DocumentKeywords t1
 
     LEFT OUTER JOIN
 
@@ -499,12 +510,36 @@ HAVING COUNT(matching_keywords) = (SELECT COUNT(keyword)
 
 
 -- ***** (20) ***** --
--- Méthode d'optimisation choisie: 
--- Motivations: 
+-- Méthode d'optimisation choisie: Index de type Arbre B+ sur la colonne 'title' de la relation 'Document'
+--                                 ET on crée une vue matérialisée sur les mots clefs du document 'SQL pour les nuls'
+-- Motivations: Simple réutilisation de l'optimiseur des outils d'optimisation mis en place ci-dessus. Du fait de la proximité
+--              des deux requêtes (la 19 et celle-ci), aucun index ou vue concrète ou algorithme de jointure n'ont été nécessaire
+--              d'ajouter.
 
+-- La requête:
+SELECT reference
+FROM
+(
+    SELECT t1.reference as reference, t1.keyword as doc_keywords, t2.keyword as matching_keywords
+    FROM DocumentKeywords t1
 
--- La nouvelle requête:
+    LEFT OUTER JOIN
 
--- L'ancienne requête:
+    (SELECT dk.keyword
+    FROM DocumentKeywords dk, Document d
+    WHERE dk.reference = d.reference 
+    AND d.title = 'SQL pour les nuls') t2
 
+    ON t1.keyword = t2.keyword
+)                                                 
+WHERE reference NOT IN (SELECT reference FROM Document d WHERE title = 'SQL pour les nuls')
+GROUP BY reference
+HAVING COUNT(matching_keywords) = (SELECT COUNT(keyword)
+                                   FROM DocumentKeywords dk, Document d
+                                   WHERE dk.reference = d.reference 
+                                   AND d.title = 'SQL pour les nuls')
+AND COUNT(doc_keywords) <= (SELECT COUNT(keyword)
+                            FROM DocumentKeywords dk, Document d
+                            WHERE dk.reference = d.reference 
+                            AND d.title = 'SQL pour les nuls');
 
