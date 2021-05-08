@@ -271,9 +271,7 @@ SELECT reference
 FROM
 (
     SELECT t1.reference as reference, t1.keyword as doc_keywords, t2.keyword as matching_keywords
-    FROM (SELECT d.reference, dk.keyword
-    FROM Document d, DocumentKeywords dk
-    WHERE dk.reference = d.reference) t1
+    FROM DocumentKeywords t1
 
     LEFT OUTER JOIN
 
