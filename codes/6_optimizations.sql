@@ -233,12 +233,16 @@ HAVING COUNT(*) > 2;
 
 
 -- ***** (9) ***** --
--- Méthode d'optimisation choisie: aucune
--- Motivations: Si la requête sert a lister tout les habitants de cette ville on peut lui donner 
--- un nom approprié et s'en servir rapidement, de plus elle est automaintenable
--- que ce soit en suppression, mise à jour ou insertion. Cependant il y a de fortes chances que l'on 
--- fasse autrement pour obtenir le même résultat et il ne semble pas pertinent d'enregister
--- cette reqête dans une vue.
+-- Méthode d'optimisation choisie: Index de type arbre B+ sur les adresses des emprunters  et sur leurs noms
+-- Motivations: En créant des index sur les noms des emprunteurs et leurs adresses on crée une sorte d'annuaire 
+--              inversible comme les pages jaunes. Il n'y a rien qu'on puisse forcer de pertinent pour l'algorithme de
+--              jointures et aucune vue concrète d'intéressante.
+
+DROP INDEX idx_borrower_address;
+CREATE INDEX idx_borrower_address ON Borrower(address);
+
+DROP INDEX idx_borrower_name;
+CREATE INDEX idx_borrower_name ON Borrower(name);
 
 -- La requête:
 SELECT DISTINCT bwr1.name
@@ -292,7 +296,7 @@ WHERE e.name NOT IN(
 --              n'aurait ici pas d'intérêt car l'optimiseur commence de toute façon par parcourir toute la table avant 
 --              de faire son GROUP BY par hachage.
 
--- L'ancienne requête (conservée telle quelle):
+-- La requête:
 SELECT bwr.name
 FROM Borrower bwr
 WHERE bwr.id NOT IN(
