@@ -331,7 +331,6 @@ WHERE d.reference NOT IN(
 DROP INDEX bidx_document_category;
 CREATE BITMAP INDEX bidx_document_category on Document(category);
 
-	
 -- La requête
 SELECT DISTINCT bwr.name, bwr.fst_name
 FROM Borrower bwr, Borrow b, Copy c, Document d
@@ -344,9 +343,18 @@ WHERE bwr.category = 'Professional'
 
 
 -- ***** (14) ***** --
--- Méthode d'optimisation choisie: aucune
--- Motivations: si la quantité d'entrée est suffisante on peut penser à un index
--- le nombre d'exemplaires cependant le hash opéré par Oracle automatiquement est amplement suffisant
+-- Méthode d'optimisation choisie: Vue concrète sur la quantité des documents
+-- Motivations: si les requêtes sur les quantités des documents sont suffisamment demandées on peut penser à une vue concrète
+-- sur le nombre d'exemplaires car ça réduit le nombre de colonnes que doit mettre en mémoire l'optimiseur.
+
+DROP MATERIALIZED VIEW mv_qte_docs;
+CREATE MATERIALIZED VIEW mv_qte_docs
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT
+ENABLE QUERY REWRITE AS
+    SELECT qte
+    FROM Document d;
 
 -- La requête:
 SELECT *
@@ -356,23 +364,23 @@ WHERE qte > (SELECT AVG(qte)
 
 
 -- ***** (15) ***** --
--- Méthode d'optimisation choisie: BITMAP
--- Motivations: On ne cherche que deux mots clé sur un domaine relativement restreint
--- un index Bitmap sur les thèmes pourrait donc s'avérer judicieux et faciliter
--- la recherche
+-- Méthode d'optimisation choisie: Index Bitmap sur les thèmes des documents et vue concrète sur la jointure DocumentAuthors et
+--                                 les auteurs.
+-- Motivations: Réutilisation par l'optimiseur de l'index Bitmap sur les thèmes des documents. La vue concrète n'est pas mettable
+--              à jour mais elle est automaintenable à l'insertion, la mise à jour et la suppression. Elle est également suffisamment
+--              basique pour être réutilisée par l'optimiseur comme c'est le cas ici.
 
+DROP MATERIALIZED VIEW mv_doc_authors;
+CREATE MATERIALIZED VIEW mv_doc_authors
+TABLESPACE USERS
+BUILD IMMEDIATE
+REFRESH complete ON COMMIT
+ENABLE QUERY REWRITE AS
+    SELECT * 
+    FROM DocumentAuthors da, Author a
+    WHERE da.author_id = a.id;
 
--- La nouvelle requête:
-drop index bdix_document_theme;
-create bitmap index bdix_document_theme on document(theme)
-SELECT DISTINCT a.name
-FROM Author a, Document d, DocumentAuthors da
-WHERE d.theme = 'informatique'
-    AND a.id = da.author_id AND da.reference = d.reference
-    AND a.id IN (SELECT da.author_id
-                 FROM Document d, DocumentAuthors da
-                 WHERE d.theme = 'mathematiques' AND d.reference = da.reference);
--- L'ancienne requête:
+-- La requête:
 SELECT DISTINCT a.name
 FROM Author a, Document d, DocumentAuthors da
 WHERE d.theme = 'informatique'
@@ -434,21 +442,8 @@ WHERE qte_emprunts_par_editeur.quantite IN
 --    SELECT d.reference, d.title, dk.keyword
 --    FROM DocumentKeywords dk, Document d
 --    WHERE dk.reference = d.reference;
---
----- La nouvelle requête:
---SELECT * 
---FROM Document d
---WHERE d.reference NOT IN (SELECT DISTINCT t1.reference
---                            FROM (SELECT d.reference, d.title, dk.keyword
---                                  FROM DocumentKeywords dk, Document d
---                                  WHERE dk.reference = d.reference) t1
---                            WHERE t1.keyword IN (SELECT keyword 
---                                                 FROM (SELECT d.reference, d.title, dk.keyword
---                                                        FROM DocumentKeywords dk, Document d
---                                                        WHERE dk.reference = d.reference) 
---                                                 WHERE title = 'SQL pour les nuls'));
 
--- L'ancienne requête:
+-- La requête:
 SELECT * 
 FROM Document d
 WHERE d.reference NOT IN (SELECT DISTINCT t1.reference
@@ -563,4 +558,3 @@ AND COUNT(doc_keywords) <= (SELECT COUNT(keyword)
                             FROM DocumentKeywords dk, Document d
                             WHERE dk.reference = d.reference 
                             AND d.title = 'SQL pour les nuls');
-
