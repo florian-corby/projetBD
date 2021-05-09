@@ -31,7 +31,7 @@ INSERT INTO Rights (cat_borrower, cat_document, duration) VALUES ('Public', 'Vid
 
 -- ********* DOCUMENT ZONE ********* --
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (1, 'Taylor', 'Allen', '1 impasse Swift 86000 Poitiers', to_date('1975-02-25', 'YYYY-MM-DD'));
-INSERT INTO Author (id, name, fst_name, address, birth) VALUES(2, 'Legendre', 'Florian', '2 avenue des Gorons 69000 Lyon', to_date('1265-07-15', 'YYYY-MM-DD'));
+INSERT INTO Author (id, name, fst_name, address, birth) VALUES (2, 'Legendre', 'Florian', '2 avenue des Gorons 69000 Lyon', to_date('1265-07-15', 'YYYY-MM-DD'));
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (3, 'Berthelot', 'Yann', '3 strada italiana 00144 Rome', to_date('2000-12-12', 'YYYY-MM-DD'));
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (4, 'Fradet', 'Amandine', '4 chemin des chemins 31000 Toulouse', to_date('1000-09-26', 'YYYY-MM-DD'));
 INSERT INTO Author (id, name, fst_name, address, birth) VALUES (5, 'Pelle', 'Sarah', '16 rue de la vieille 34000 Montpellier', to_date('1965-06-04', 'YYYY-MM-DD'));
