@@ -261,9 +261,9 @@ WHERE bwr1.address = bwr2.address
 -- à l'esprit qu'elle ne serait ni mettable à jour du fait de la jointure, ni automaintenable à la suppression dans Document. 
 -- Elle est automaintenable à l'insertion dans Document.
 
-DROP MATERIALIZED VIEW editorCS;
+DROP MATERIALIZED VIEW mv_editor_cs;
 
-CREATE MATERIALIZED VIEW editorCS 
+CREATE MATERIALIZED VIEW mv_editor_cs
 TABLESPACE USERS
 BUILD IMMEDIATE
 REFRESH complete ON COMMIT
@@ -273,20 +273,14 @@ ENABLE QUERY REWRITE AS
     WHERE e.name = d.editor AND d.theme = 'informatique'
     GROUP BY e.name;
 
--- La nouvelle requête:
-SELECT e.name 
-FROM Editor e
-WHERE e.name NOT IN (SELECT * FROM editorCS);
-
--- L'ancienne requête (l'optimiseur choisit aussi la vue matérialisée ici):
+-- La requête:
 SELECT e.name
 FROM Editor e
 WHERE e.name NOT IN(
     SELECT e.name
     FROM Editor e, Document d
     WHERE e.name = d.editor AND d.theme = 'informatique'
-    GROUP BY e.name
-);
+    GROUP BY e.name);
 
 
 -- ***** (11) ***** --
@@ -307,10 +301,10 @@ WHERE bwr.id NOT IN(
 
 
 -- ***** (12) ***** --
--- Méthode d'optimisation choisie: 
+-- Méthode d'optimisation choisie: Aucune
 -- Motivations: Même motivation que la requête précédente
 
--- L'ancienne requête (conservée telle quelle):
+-- La requête:
 SELECT *
 FROM Document d
 WHERE d.reference NOT IN(
@@ -321,25 +315,24 @@ WHERE d.reference NOT IN(
 
 
 -- ***** (13) ***** --
--- Méthode d'optimisation choisie: Index Btree+
+-- Méthode d'optimisation choisie: Index Btree+ sur les dates d'emprunts et Index Bitmap sur les catégories 
+--                                 d'emprunteurs et de Document.
 -- Motivations : On peut calculer un index sur les dates qui permettra d'obtenir 
 -- la période qui nous intéresse bien plus rapidement si elles sont triées si la table
--- des emprunteur est très conséquentes on pourrait égelmment créer un index sur les type d'emprunteur
+-- des emprunteur est très conséquentes on pourrait également créer un index bitmap sur les catégories d'emprunteur
+-- et les catégories de document. Seul l'index sur les catégories des documents est utilisé par l'optimiseur cependant.
+-- Les autres index proposés sont donc commentés. Ceci est peut-être dû au fait que la quantité de données n'est pas suffisante
+-- pour qu'ils soient vraiment pertinents ici.
 
+--DROP INDEX idx_borrow_borrowingDate;
+--CREATE INDEX idx_borrow_borrowingDate on borrow(borrowing_date);
+--DROP INDEX bidx_borrower_category;
+--CREATE BITMAP INDEX bidx_borrower_category on Borrower(category);
+DROP INDEX bidx_document_category;
+CREATE BITMAP INDEX bidx_document_category on Document(category);
 
--- La nouvelle requête:
-drop index idx_borrow_borrowingDate
-CREATE index idx_borrow_borrowingDate on borrow(borrowing_date)
-SELECT DISTINCT bwr.name, bwr.fst_name
-FROM Borrower bwr, Borrow b, Copy c, Document d
-WHERE bwr.category = 'Professional'
-    AND bwr.id = b.borrower
-    AND d.category = 'DVD'
-    AND b.copy = c.id
-    AND c.reference = d.reference
-    AND b.borrowing_date >= add_months(sysdate, -6);
 	
--- L'ancienne requête
+-- La requête
 SELECT DISTINCT bwr.name, bwr.fst_name
 FROM Borrower bwr, Borrow b, Copy c, Document d
 WHERE bwr.category = 'Professional'
